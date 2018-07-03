@@ -1,5 +1,5 @@
 import docker
-from flask import Flask
+from flask import Flask, redirect
 from flask_pymongo import PyMongo
 
 
@@ -33,7 +33,7 @@ def launch():
                                  #'echo hello world',
                                  detach=True, ports={'80/tcp': port})
     print(cont)
-    return str(port)
+    return redirect("http://localhost:%d" % port)
 
 
 if __name__ == '__main__':
