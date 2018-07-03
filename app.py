@@ -29,9 +29,9 @@ def hello():
 def launch():
     port = get_increment_port()
     client = docker.from_env()
-    cont = client.containers.run('cwc_integ_service:latest',
-                                 #'echo hello world',
-                                 detach=True, ports={'80/tcp': port})
+    cont = client.containers.run('cwc-integ:latest',
+                                 '/sw/cwc-integ/startup.sh',
+                                 detach=True, ports={'8000/tcp': port})
     print(cont)
     return redirect("http://localhost:%d" % port)
 
