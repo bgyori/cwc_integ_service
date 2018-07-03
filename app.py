@@ -1,4 +1,4 @@
-import subprocess
+import docker
 from flask import Flask
 from flask_pymongo import PyMongo
 
@@ -22,12 +22,18 @@ def get_increment_port():
 
 @app.route('/')
 def hello():
-    return "Bob with Bioagents"
+    return 'Bob with Bioagents'
 
 
 @app.route('/launch')
 def launch():
-    return str(get_increment_port())
+    port = get_increment_port()
+    client = docker.from_env()
+    cont = client.containers.run('cwc_integ_service:latest',
+                                 #'echo hello world',
+                                 detach=True, ports={'80/tcp': port})
+    print(cont)
+    return str(port)
 
 
 if __name__ == '__main__':
