@@ -1,10 +1,15 @@
 import time
 import docker
-from flask import Flask, redirect, render_template
+from flask import Flask, redirect, render_template, url_for
 from flask_wtf import Form
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
 from wtforms import SubmitField
+
+
+MAX_SESSIONS = 2
+class SessionLimitExceeded(Exception):
+    pass
 
 
 app = Flask(__name__)
@@ -25,6 +30,26 @@ def get_increment_port():
         port += 1
     return port
 
+def reset_sessions():
+    print('Resetting sessions')
+    mongo.db.sessions.update_one({}, {'$set': {'num_sessions': 0}})
+
+
+def get_num_sessions():
+    sessions_json = mongo.db.sessions.find_one()
+    num_sessions = sessions_json['num_sessions']
+    return num_sessions
+
+
+def increment_sessions():
+    sessions_json = mongo.db.sessions.find_one()
+    num_sessions = sessions_json['num_sessions']
+    if num_sessions == MAX_SESSIONS:
+        raise SessionLimitExceeded()
+    mongo.db.sessions.update_one({'num_sessions': num_sessions},
+                                 {'$set': {'num_sessions': num_sessions + 1}})
+    return num_sessions + 1
+
 
 class ClicForm(Form):
     submit_button = SubmitField('Launch with CLiC')
@@ -36,17 +61,24 @@ class SbgnForm(Form):
 
 @app.route('/')
 def hello():
-    clic_form = ClicForm()
-    sbgn_form = SbgnForm()
-    kwargs = {'clic_form': clic_form, 'sbgn_form': sbgn_form}
-    return render_template('index.html', **kwargs)
+    num_sessions = get_num_sessions()
+    if num_sessions < MAX_SESSIONS:
+        clic_form = ClicForm()
+        sbgn_form = SbgnForm()
+        kwargs = {'clic_form': clic_form, 'sbgn_form': sbgn_form}
+        return render_template('index.html', **kwargs)
+    else:
+        print('Number of sessions: %d' % num_sessions)
+        # TODO: this should be part of the index page with buttons
+        # greyed out
+        return 'There are currently too many sessions, please come back later.'
 
 
 @app.route('/launch_clic')
 def launch_clic():
     port = get_increment_port()
     _run_container(port, 8000)
-    return redirect("http://localhost:%d/clic/bio" % port)
+    return redirect(":%d/clic/bio" % port)
 
 
 @app.route('/launch_sbgn')
@@ -57,6 +89,8 @@ def launch_sbgn():
 
 
 def _run_container(port, expose_port):
+    num_sessions = increment_sessions()
+    print('We now have %d active sessions' % num_sessions)
     client = docker.from_env()
     cont = client.containers.run('cwc-integ:latest',
                                  '/sw/cwc-integ/startup.sh',
@@ -69,4 +103,4 @@ def _run_container(port, expose_port):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
