@@ -1,6 +1,6 @@
 import time
 import docker
-from flask import Flask, redirect, render_template, url_for
+from flask import Flask, redirect, render_template, url_for, request
 from flask_wtf import Form
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
@@ -77,13 +77,17 @@ def hello():
 @app.route('/launch_clic')
 def launch_clic():
     port = get_increment_port()
+    host = str(request.host).split(':')[0] + (':%d/clic/bio' % port)
+    print('Will redirect to address: %s' % host)
     _run_container(port, 8000)
-    return redirect(":%d/clic/bio" % port)
+    return redirect(host)
 
 
 @app.route('/launch_sbgn')
 def launch_sbgn():
     port = get_increment_port()
+    host = str(request.host).split(':')[0] + (':%d' % port)
+    print('Will redirect to address: %s' % host)
     _run_container(port, 3000)
     return redirect("http://localhost:%d/" % port)
 
