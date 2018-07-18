@@ -1,12 +1,17 @@
 import time
 import docker
-from flask import Flask, redirect
+from flask import Flask, redirect, render_template
+from flask_wtf import Form
 from flask_pymongo import PyMongo
+from flask_bootstrap import Bootstrap
+from wtforms import SubmitField
 
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/myDatabase"
+app.config["MONGO_URI"] = 'mongodb://localhost:27017/myDatabase'
+app.config['SECRET_KEY'] = 'dev_key'
 mongo = PyMongo(app)
+Bootstrap(app)
 
 
 def get_increment_port():
@@ -21,18 +26,20 @@ def get_increment_port():
     return port
 
 
+class ClicForm(Form):
+    submit_button = SubmitField('Launch with CLiC')
+
+
+class SbgnForm(Form):
+    submit_button = SubmitField('Launch with SBGN')
+
+
 @app.route('/')
 def hello():
-    html = '<h1 align="center">Bob with Bioagents</h1>'
-    html += """
-        <form action="/launch_clic" method="get">
-            <button name="clic_btn" type="submit">Launch with CLiC</button>
-        </form>
-        <form action="/launch_sbgn" method="get">
-            <button name="sbgn_btn" type="submit">Launch with SBGN</button>
-        </form>
-        """
-    return html
+    clic_form = ClicForm()
+    sbgn_form = SbgnForm()
+    kwargs = {'clic_form': clic_form, 'sbgn_form': sbgn_form}
+    return render_template('index.html', **kwargs)
 
 
 @app.route('/launch_clic')

@@ -1,0 +1,20 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+
+{% block content %}
+{{util.flashed_messages(dismissible=True)}}
+<div class="container">
+    <h1 align="center">Bob with Bioagents</h1>
+    {{ wtf.quick_form(clic_form, action='launch_clic', method='GET',
+                      button_map={'submit_button': 'clic'}) }}
+    {{ wtf.quick_form(sbgn_form, action='launch_sbgn', method='GET',
+                      button_map={'submit_button': 'sbgn'}) }}
+</div>
+{% endblock %}
+
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{% endblock %}
