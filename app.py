@@ -81,7 +81,7 @@ def launch_clic():
     port = get_increment_port()
     host = 'http://' + str(request.host).split(':')[0] + (':%d/clic/bio' % port)
     print('Will redirect to address: %s' % host)
-    #_run_container(port, 8000)
+    _run_container(port, 8000)
     print('Start redirecting')
     return render_template('launch_dialogue.html', dialogue_url=host, time_out=90)
 
@@ -106,7 +106,6 @@ def _run_container(port, expose_port):
     print('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
     print('Now waiting before redirecting...')
-    time.sleep(5)
 
 
 if __name__ == '__main__':
