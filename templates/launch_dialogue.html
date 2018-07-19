@@ -1,0 +1,45 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+
+{% block content %}
+{{util.flashed_messages(dismissible=True)}}
+
+<script>
+	function start_timer(duration){
+        var timer = duration;
+        setInterval(function(){
+			console.log(timer)
+            document.getElementById("counter").textContent = --timer;
+            }, 1000);
+        };
+
+	window.onload = function () {
+        redirecttime = "90000";
+        redirecturl = "{{dialogue_url}}";
+        setTimeout("location.href = redirecturl;", redirecttime);
+        var timeout = {{time_out}};
+        start_timer(timeout);
+        };
+
+</script>
+
+
+<div class="container">
+    <div class="jumbotron">
+        <h2>Dialogue session starting...</h2>
+        <p>You will be redirected to {{dialogue_url}} in
+           <span id="counter">{{time_out}}</span>
+           seconds...
+        </p>
+        <div align="center" id="spinnerelem"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{% endblock %}
