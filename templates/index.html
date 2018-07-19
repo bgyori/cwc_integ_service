@@ -33,7 +33,8 @@
          role="form">
           {{ clic_form.hidden_tag() }}
           {{ wtf.form_errors(clic_form, hiddens="only") }}
-          {{ wtf.form_field(clic_form.submit_button, class="btn btn-primary") }}
+          {{ wtf.form_field(clic_form.submit_button, class="btn btn-primary",
+                            onclick="JavaScript:timedRedirect()") }}
         </form>
         </div>
     </div>

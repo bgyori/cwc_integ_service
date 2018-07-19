@@ -37,6 +37,8 @@ def reset_sessions():
 
 def get_num_sessions():
     sessions_json = mongo.db.sessions.find_one()
+    if not sessions_json:
+        return 0
     num_sessions = sessions_json['num_sessions']
     return num_sessions
 
@@ -77,10 +79,11 @@ def hello():
 @app.route('/launch_clic')
 def launch_clic():
     port = get_increment_port()
-    host = str(request.host).split(':')[0] + (':%d/clic/bio' % port)
+    host = 'http://' + str(request.host).split(':')[0] + (':%d/clic/bio' % port)
     print('Will redirect to address: %s' % host)
-    _run_container(port, 8000)
-    return redirect(host)
+    #_run_container(port, 8000)
+    print('Start redirecting')
+    return render_template('launch_dialogue.html', dialogue_url=host, time_out=90)
 
 
 @app.route('/launch_sbgn')
@@ -88,8 +91,8 @@ def launch_sbgn():
     port = get_increment_port()
     host = str(request.host).split(':')[0] + (':%d' % port)
     print('Will redirect to address: %s' % host)
-    _run_container(port, 3000)
-    return redirect("http://localhost:%d/" % port)
+    #_run_container(port, 3000)
+    #return redirect("http://localhost:%d/" % port)
 
 
 def _run_container(port, expose_port):
@@ -103,7 +106,7 @@ def _run_container(port, expose_port):
     print('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
     print('Now waiting before redirecting...')
-    time.sleep(90)
+    time.sleep(5)
 
 
 if __name__ == '__main__':
