@@ -32,7 +32,11 @@ def get_increment_port():
 
 def reset_sessions():
     print('Resetting sessions')
-    mongo.db.sessions.update_one({}, {'$set': {'num_sessions': 0}})
+    sessions_json = mongo.db.sessions.find_one()
+    if sessions_json is None:
+        mongo.db.sessions.insert_one({'num_sessions': 0})
+    else:
+        mongo.db.sessions.update_one({}, {'$set': {'num_sessions': 0}})
 
 
 def get_num_sessions():
@@ -45,6 +49,8 @@ def get_num_sessions():
 
 def increment_sessions():
     sessions_json = mongo.db.sessions.find_one()
+    if sessions_json is None:
+        reset_sessions()
     num_sessions = sessions_json['num_sessions']
     if num_sessions == MAX_SESSIONS:
         raise SessionLimitExceeded()
