@@ -88,7 +88,7 @@ def launch_clic():
     host = 'http://' + str(request.host).split(':')[0] + (':%d/clic/bio' % port)
     print('Will redirect to address: %s' % host)
     _run_container(port, 8000)
-    print('Start redirecting')
+    print('Start redirecting CLIC interface.')
     return render_template('launch_dialogue.html', dialogue_url=host, time_out=90)
 
 
@@ -97,8 +97,9 @@ def launch_sbgn():
     port = get_increment_port()
     host = str(request.host).split(':')[0] + (':%d' % port)
     print('Will redirect to address: %s' % host)
-    #_run_container(port, 3000)
-    #return redirect("http://localhost:%d/" % port)
+    _run_container(port, 3000)
+    print('Start redirecting SBGN interface.')
+    return render_template('launch_dialogue.html', dialogue_url=host, time_out=90)
 
 
 def _run_container(port, expose_port):
