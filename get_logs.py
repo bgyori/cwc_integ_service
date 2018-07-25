@@ -47,12 +47,29 @@ def format_cont_date(cont):
 def make_cont_name(cont):
     return '%s_%s_%s' % (cont.image.attrs['Config']['Image'],
                          cont.image.attrs['Config']['Hostname'], cont.name)
-   
 
-def get_logs():
+
+def get_logs_for_container(cont):
+    ses_log_fname = get_session_logs(cont)
+    run_log_fname = get_run_logs(cont)
+    for fname in [ses_log_fname, run_log_fname]:
+        _dump_on_s3(fname)
+    return
+
+
+def _dump_on_s3(fname):
     s3 = boto3.client('s3')
     s3_bucket = 'cwc-hms'
     s3_prefix = 'bob_ec2_logs/'
+    if not fname:
+        return
+    with open(fname, 'rb') as f:
+        s3.put_object(Key=s3_prefix + fname, Body=f.read(),
+                      Bucket=s3_bucket)
+    return
+
+
+def get_logs():
     client = docker.from_env()
     cont_list = client.containers.list(True)
     master_logs = []
@@ -65,11 +82,7 @@ def get_logs():
     print(log_arches)
     now = datetime.now()
     for fname in log_arches + master_logs:
-        if not fname:
-            continue
-        with open(fname, 'rb') as f:
-            s3.put_object(Key=s3_prefix + fname, Body=f.read(),
-                          Bucket=s3_bucket)
+        _dump_on_s3(fname)
     return
 
 
