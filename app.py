@@ -6,6 +6,8 @@ from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
 from wtforms import SubmitField
 
+from get_logs import get_logs_for_container
+
 
 MAX_SESSIONS = 2
 class SessionLimitExceeded(Exception):
@@ -87,9 +89,11 @@ def launch_clic():
     port = get_increment_port()
     host = 'http://' + str(request.host).split(':')[0] + (':%d/clic/bio' % port)
     print('Will redirect to address: %s' % host)
-    _run_container(port, 8000)
+    cont_id = _run_container(port, 8000)
     print('Start redirecting CLIC interface.')
-    return render_template('launch_dialogue.html', dialogue_url=host, time_out=90)
+    return render_template('launch_dialogue.html', dialogue_url=host,
+                           manager_url=request.host, container_id=cont_id,
+                           time_out=90)
 
 
 @app.route('/launch_sbgn')
@@ -97,9 +101,24 @@ def launch_sbgn():
     port = get_increment_port()
     host = str(request.host).split(':')[0] + (':%d' % port)
     print('Will redirect to address: %s' % host)
-    _run_container(port, 3000)
+    cont_id = _run_container(port, 3000)
     print('Start redirecting SBGN interface.')
-    return render_template('launch_dialogue.html', dialogue_url=host, time_out=90)
+    return render_template('launch_dialogue.html', dialogue_url=host,
+                           manager_url=request.host, container_id=cont_id,
+                           time_out=90)
+
+
+@app.route('/end_session')
+def stop_session():
+    query_dict = request.args.copy()
+    cont_id = query_dict.get('id')
+    assert cont_id, "Bad request. Need an id."
+    client = docker.from_env()
+    cont = client.containers.get(cont_id)
+    cont.stop()
+    get_logs_for_container(cont)
+    cont.remove()
+    pass
 
 
 def _run_container(port, expose_port):
@@ -113,6 +132,7 @@ def _run_container(port, expose_port):
     print('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
     print('Now waiting before redirecting...')
+    return cont.id
 
 
 if __name__ == '__main__':
