@@ -28,13 +28,18 @@
 
 <div class="container">
     <div class="jumbotron">
-        <h2>Dialogue session starting...</h2>
+        <h2>Dialogue Session</h2>
         <p>Please wait while your dedicated dialogue session is starting.
-           You will be redirected to {{dialogue_url}} in
+           You should see your session available in
            <span id="counter">{{time_out}}</span>
            seconds...
         </p>
         <div align="center" id="spinnerelem"></div>
+        <button type="button" onclick="http://{{manager_url}}/end_session?id={{container_id}}">End Session</button>
+    </div>
+    <div>
+        <h2>Your Session</h2>
+        <iframe src={{dialogue_url}} frameborder=0 allowfullscreen></iframe>
     </div>
 </div>
 
