@@ -7,56 +7,53 @@
 {{util.flashed_messages(dismissible=True)}}
 
 <script>
-    function start_timer(duration){
-        var timer = duration;
-        setInterval(
-            function(){
-                if (timer >= 0) {
-                    console.log(timer)
-                    document.getElementById("counter").textContent = --timer;
-                    };
-                },
-            1000
-            );
+    var timer = {{time_out}}
+    var interval = setInterval(checkup, 1000);
+
+    function checkup(){
+        if (timer >= 0) {
+            console.log(timer)
+            document.getElementById("counter").textContent = --timer;
+            }
+        else {
+            document.getElementById("counter_div").style.display='None';
+            document.getElementById("dialogue_div").style.display='inline-flex';
+            document.getElementById("dialogue_frame").src = '{{dialogue_url}}';
+            clearInterval(interval)
+            }
         };
 
     function submit_delete() {
         var xhr = new XMLHttpRequest();
-        xhr.open("DELETE", "http://{{manager_url}}/end_session/{{container_id}}", false);
+        xhr.open("DELETE", "{{manager_url}}/end_session/{{container_id}}", false);
         xhr.send();
         alert("Redirecting you back to the home page...");
-        location.href = "http://{{manager_url}}";
-        };
-    window.onload = function () {
-        redirecttime = "90000";
-        redirecturl = "{{dialogue_url}}";
-        //setTimeout("location.href = redirecturl;", redirecttime);
-        //setTimeout("document.getElementById(\"dialogueframe\").style.visibility=\"visible\";",
-        //           redirecttime);
-        //setTimeout("document.getElementById(\"dialogueframe\").contentWindow.location.reload();",
-        //           redirecttime);
-        var timeout = {{time_out}};
-        start_timer(timeout);
+        location.href = "{{manager_url}}";
         };
 
 </script>
 
 
 <div class="container">
-    <div class="well">
+    <div id="counter_div" align="center" class="well">
         <p>Please wait while your dedicated dialogue session is starting.
            Your session will be available below in
            <span id="counter">{{time_out}}</span>
            seconds...
         </p>
-        When done, click this button to end your session:
-    <button type="button" onclick="submit_delete()")>End Session</button>
     </div>
 </div>
-    
-    <div align="center">
-        <iframe width="1700" height="1500" id="dialogueframe" src={{dialogue_url}} frameborder="0" allowfullscreen></iframe>
+<div class="container">
+    <div id="end_div" align="center" class="well">
+        When done, click this button to end your session:
+        <button type="button" onclick="submit_delete()">End Session</button>
     </div>
+    
+    <div id="dialogue_div" align="center" style="display: none;">
+        <iframe width="1700" height="1500" src="" id="dialogue_frame" frameborder="0" allowfullscreen>
+        </iframe>
+    </div>
+</div>
 
 {% endblock %}
 
