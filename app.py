@@ -99,7 +99,7 @@ def launch_clic():
 @app.route('/launch_sbgn')
 def launch_sbgn():
     port = get_increment_port()
-    host = str(request.host).split(':')[0] + (':%d' % port)
+    host = 'http://' + str(request.host).split(':')[0] + (':%d' % port)
     print('Will redirect to address: %s' % host)
     cont_id = _run_container(port, 3000)
     print('Start redirecting SBGN interface.')
