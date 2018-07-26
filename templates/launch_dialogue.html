@@ -25,7 +25,7 @@
 
     function submit_delete() {
         var xhr = new XMLHttpRequest();
-        xhr.open("DELETE", "{{manager_url}}/end_session/{{container_id}}", false);
+        xhr.open("DELETE", "{{manager_url}}/end_session/{{container_id}}", true);
         xhr.send();
         alert("Redirecting you back to the home page...");
         location.href = "{{manager_url}}";
@@ -49,7 +49,7 @@
         <button type="button" onclick="submit_delete()">End Session</button>
     </div>
     
-    <div id="dialogue_div" align="center" style="display: none;">
+    <div id="dialogue_div" style="display: none;">
         <iframe width="1700" height="1500" src="" id="dialogue_frame" frameborder="0" allowfullscreen>
         </iframe>
     </div>
