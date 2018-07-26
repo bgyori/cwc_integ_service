@@ -26,3 +26,18 @@ sudo mount /dev/xvdy /pmc/
 #}
 sudo systemctl daemon-reload
 sudo systemctl restart docker
+sudo apt-get install nginx
+# Add
+# server {
+#    listen 80;
+#    server_name <server's public IP>;
+#
+#     location / {
+#         proxy_pass http://<server's public IP>:8080;
+#         }
+#}
+# to /etc/nginx/sites-available/cwc_integ_service
+# obviously depending on the actual IP of the server
+sudo ln -s /etc/nginx/sites-available/cwc_integ_service /etc/nginx/sites-enabled
+sudo rm /etc/nginx/sites-enabled/default
+sudo systemctl restart nginx
