@@ -99,12 +99,13 @@ def launch_clic():
 @app.route('/launch_sbgn')
 def launch_sbgn():
     port = get_increment_port()
-    host = 'http://' + str(request.host).split(':')[0] + (':%d' % port)
+    base_host = 'http://' + str(request.host).split(':')[0]
+    host = base_host + (':%d' % port)
     print('Will redirect to address: %s' % host)
     cont_id = _run_container(port, 3000)
     print('Start redirecting SBGN interface.')
     return render_template('launch_dialogue.html', dialogue_url=host,
-                           manager_url=request.host, container_id=cont_id,
+                           manager_url=base_host, container_id=cont_id,
                            time_out=90)
 
 
@@ -119,7 +120,7 @@ def stop_session(cont_id):
     cont.stop()
     cont.remove()
     print("Container removed.")
-    return
+    return 200 
 
 
 def _run_container(port, expose_port):
