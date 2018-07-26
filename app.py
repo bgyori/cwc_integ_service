@@ -61,6 +61,29 @@ def increment_sessions():
     return num_sessions + 1
 
 
+def decrement_sessions():
+    sessions_json = mongo.db.sessions.find_one()
+    if sessions_json is None:
+        reset_sessions()
+    num_sessions = sessions_json['num_sessions']
+    mongo.db.sessions.update_one({'num_sessions': num_sessions},
+                                 {'$set': {'num_sessions': num_sessions - 1}})
+    return num_sessions - 1
+
+
+
+def _launch_app(interface_port_num, app_name, extension=''):
+    port = get_increment_port()
+    base_host = 'http://' + str(request.host).split(':')[0]
+    host = base_host + (':%d' % port + extension)
+    print('Will redirect to address: %s' % host)
+    cont_id = _run_container(port, interface_port_num)
+    print('Start redirecting %s interface.' % app_name)
+    return render_template('launch_dialogue.html', dialogue_url=host,
+                           manager_url=base_host, container_id=cont_id,
+                           time_out=90)
+
+
 class ClicForm(Form):
     submit_button = SubmitField('Launch with CLiC')
 
@@ -86,27 +109,12 @@ def hello():
 
 @app.route('/launch_clic')
 def launch_clic():
-    port = get_increment_port()
-    host = 'http://' + str(request.host).split(':')[0] + (':%d/clic/bio' % port)
-    print('Will redirect to address: %s' % host)
-    cont_id = _run_container(port, 8000)
-    print('Start redirecting CLIC interface.')
-    return render_template('launch_dialogue.html', dialogue_url=host,
-                           manager_url=request.host, container_id=cont_id,
-                           time_out=90)
+    return _launch_app(8000, 'CLIC', '/clic/bio')
 
 
 @app.route('/launch_sbgn')
 def launch_sbgn():
-    port = get_increment_port()
-    base_host = 'http://' + str(request.host).split(':')[0]
-    host = base_host + (':%d' % port)
-    print('Will redirect to address: %s' % host)
-    cont_id = _run_container(port, 3000)
-    print('Start redirecting SBGN interface.')
-    return render_template('launch_dialogue.html', dialogue_url=host,
-                           manager_url=base_host, container_id=cont_id,
-                           time_out=90)
+    return _launch_app(3000, 'SBGN')
 
 
 @app.route('/end_session/<cont_id>', methods=['DELETE'])
@@ -120,7 +128,8 @@ def stop_session(cont_id):
     cont.stop()
     cont.remove()
     print("Container removed.")
-    return 200 
+    decrement_sessions()
+    return 'Success!', 200 
 
 
 def _run_container(port, expose_port):
