@@ -108,17 +108,18 @@ def launch_sbgn():
                            time_out=90)
 
 
-@app.route('/end_session')
-def stop_session():
-    query_dict = request.args.copy()
-    cont_id = query_dict.get('id')
+@app.route('/end_session/<cont_id>', methods=['DELETE'])
+def stop_session(cont_id):
+    print("Request to end %s." % cont_id)
     assert cont_id, "Bad request. Need an id."
     client = docker.from_env()
     cont = client.containers.get(cont_id)
-    cont.stop()
+    print("Got client %s, aka %s." % (cont.id, cont.name))
     get_logs_for_container(cont)
+    cont.stop()
     cont.remove()
-    pass
+    print("Container removed.")
+    return
 
 
 def _run_container(port, expose_port):
