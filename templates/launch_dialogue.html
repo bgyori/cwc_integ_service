@@ -7,20 +7,32 @@
 {{util.flashed_messages(dismissible=True)}}
 
 <script>
-	function start_timer(duration){
+    function start_timer(duration){
         var timer = duration;
-        setInterval(function(){
-			console.log(timer)
-            document.getElementById("counter").textContent = --timer;
-            }, 1000);
+        setInterval(
+            function(){
+                if (timer >= 0) {
+                    console.log(timer)
+                    document.getElementById("counter").textContent = --timer;
+                    };
+                },
+            1000
+            );
         };
 
-	window.onload = function () {
+    function submit_delete() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("DELETE", "http://{{manager_url}}/end_session/{{container_id}}", true);
+        xhr.send();
+        };
+    window.onload = function () {
         redirecttime = "90000";
         redirecturl = "{{dialogue_url}}";
         //setTimeout("location.href = redirecturl;", redirecttime);
-        setTimeout("document.getElementById(\"dialogueframe\").style=\"visibility: visible;\");",
-                   redirecttime);
+        //setTimeout("document.getElementById(\"dialogueframe\").style.visibility=\"visible\";",
+        //           redirecttime);
+        //setTimeout("document.getElementById(\"dialogueframe\").contentWindow.location.reload();",
+        //           redirecttime);
         var timeout = {{time_out}};
         start_timer(timeout);
         };
@@ -29,20 +41,20 @@
 
 
 <div class="container">
-    <div class="jumbotron">
-        <h2>Dialogue Session</h2>
+    <div class="well">
         <p>Please wait while your dedicated dialogue session is starting.
            Your session will be available below in
            <span id="counter">{{time_out}}</span>
            seconds...
         </p>
-        <button type="button" onclick="http://{{manager_url}}/end_session?id={{container_id}}">End Session</button>
-    </div>
-    <div>
-        <iframe id="dialogueframe" src={{dialogue_url}}
-         frameborder=0 allowfullscreen style="visibility: hidden;"></iframe>
+        When done, click this button to end your session:
+    <button type="button" onclick="submit_delete()")>End Session</button>
     </div>
 </div>
+    
+    <div align="center">
+        <iframe width="1700" height="1500" id="dialogueframe" src={{dialogue_url}} frameborder="0" allowfullscreen></iframe>
+    </div>
 
 {% endblock %}
 
