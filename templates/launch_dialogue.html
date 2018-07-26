@@ -18,7 +18,9 @@
 	window.onload = function () {
         redirecttime = "90000";
         redirecturl = "{{dialogue_url}}";
-        setTimeout("location.href = redirecturl;", redirecttime);
+        //setTimeout("location.href = redirecturl;", redirecttime);
+        setTimeout("document.getElementById(\"dialogueframe\").style=\"visibility: visible;\");",
+                   redirecttime);
         var timeout = {{time_out}};
         start_timer(timeout);
         };
@@ -37,7 +39,8 @@
         <button type="button" onclick="http://{{manager_url}}/end_session?id={{container_id}}">End Session</button>
     </div>
     <div>
-        <iframe src={{dialogue_url}} frameborder=0 allowfullscreen></iframe>
+        <iframe id="dialogueframe" src={{dialogue_url}}
+         frameborder=0 allowfullscreen style="visibility: hidden;"></iframe>
     </div>
 </div>
 
