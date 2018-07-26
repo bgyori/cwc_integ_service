@@ -22,8 +22,10 @@
 
     function submit_delete() {
         var xhr = new XMLHttpRequest();
-        xhr.open("DELETE", "http://{{manager_url}}/end_session/{{container_id}}", true);
+        xhr.open("DELETE", "http://{{manager_url}}/end_session/{{container_id}}", false);
         xhr.send();
+        alert("Redirecting you back to the home page...");
+        location.href = "http://{{manager_url}}";
         };
     window.onload = function () {
         redirecttime = "90000";
