@@ -9,7 +9,7 @@ from wtforms import SubmitField
 from get_logs import get_logs_for_container
 
 
-MAX_SESSIONS = 2
+MAX_SESSIONS = 8
 class SessionLimitExceeded(Exception):
     pass
 
@@ -131,7 +131,6 @@ def _run_container(port, expose_port):
                                  ports={('%d/tcp' % expose_port): port})
     print('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
-    print('Now waiting before redirecting...')
     return cont.id
 
 
