@@ -5,7 +5,7 @@ from datetime import datetime
 
 def c_ls(container, dirname):
     started = False
-    if container.status == 'exited':
+    if container.status != 'running':
         started = True
         container.start()
         container.attach()
