@@ -11,7 +11,7 @@
     var interval = setInterval(checkup, 1000);
 
     function checkup(){
-        if (timer >= 0) {
+        if (timer > 1) {
             console.log(timer)
             document.getElementById("counter").textContent = --timer;
             }
@@ -51,7 +51,7 @@
     
 </div>
 <div id="dialogue_div" style="display: none;">
-    <iframe width="1700" height="1500" src="" id="dialogue_frame" frameborder="0" allowfullscreen>
+    <iframe align="middle" width="1700" height="1500" src="" id="dialogue_frame" frameborder="0" allowfullscreen>
     </iframe>
 </div>
 
