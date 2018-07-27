@@ -71,8 +71,28 @@ def decrement_sessions():
     return num_sessions - 1
 
 
+def add_token(token):
+    mongo.db.tokens.insert_one({'token': token})
+
+
+def has_token(token):
+    tokens = mongo.db.tokens.find()
+    if tokens is None:
+        return False
+    for tok in tokens:
+        if tok['token'] == token:
+            return True
+    return False
+
 
 def _launch_app(interface_port_num, app_name, extension=''):
+    # Here we check if the same token was already used to start a session
+    token = request.form['csrf_token']
+    if has_token(token):
+        return 'You already have a running session, please stop it ' + \
+            'and refresh the main page again to start another one.'
+    # We add the token to make sure it can't be reused
+    add_token(token)
     port = get_increment_port()
     base_host = 'http://' + str(request.host).split(':')[0]
     host = base_host + (':%d' % port + extension)
@@ -107,12 +127,12 @@ def hello():
         return 'There are currently too many sessions, please come back later.'
 
 
-@app.route('/launch_clic')
+@app.route('/launch_clic', methods=['POST'])
 def launch_clic():
     return _launch_app(8000, 'CLIC', '/clic/bio')
 
 
-@app.route('/launch_sbgn')
+@app.route('/launch_sbgn', methods=['POST'])
 def launch_sbgn():
     return _launch_app(3000, 'SBGN')
 
