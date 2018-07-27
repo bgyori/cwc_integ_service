@@ -1,6 +1,6 @@
 import time
 import docker
-from flask import Flask, redirect, render_template, url_for, request
+from flask import Flask, redirect, render_template, url_for, request, flash
 from flask_wtf import Form
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
@@ -89,8 +89,12 @@ def _launch_app(interface_port_num, app_name, extension=''):
     # Here we check if the same token was already used to start a session
     token = request.form['csrf_token']
     if has_token(token):
-        return 'You already have a running session, please stop it ' + \
-            'and refresh the main page again to start another one.'
+        # Flash could be nice but it gets placed on the home page instead of
+        # the page with the dialogue for some reason
+        # flash('You already have a session!')
+        return ('', 204)
+        #return 'You already have a running session, please stop it ' + \
+        #    'and refresh the main page again to start another one.'
     # We add the token to make sure it can't be reused
     add_token(token)
     port = get_increment_port()
