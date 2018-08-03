@@ -5,4 +5,4 @@ Setup steps
 `instance_setup.sh` which is _not_ yet fully automated so it's better done
 with human supervision
 3. Run `guni.sh` on the instance to start the service
-4. Test by going to <instance public IP>:8080 in a browser
+4. Test by going to [instance public IP]:8080 in a browser
