@@ -10,11 +10,16 @@ tags_replace = {
         'i': '[italic]',
         'ul': '[list]',
         'li': '[list]',
-        'h4': '[heading]'
+        'h4': '[heading]',
+        'table': '[table]'
         }
 
 def read_fix_log(log):
     """Return an XML ElementTree of the log."""
+    # First just simply remove some tags
+    for tag in ['b', 'i', 'p']:
+        log = log.replace('<%s>' % tag, '')
+        log = log.replace('</%s>' % tag, '')
     # Add missing closing tag
     log += '\n</LOG>'
     # Replace invalid character
@@ -22,13 +27,12 @@ def read_fix_log(log):
     log = log.replace('<br>', '\n\n')
     # Replace <ekb>...</ekb>
     for tag, rep in tags_replace.items():
-        log = re.sub('<%s[\s\S]*?</%s>' % (tag, tag), rep, log,
-                     flags=(re.MULTILINE | re.DOTALL))
+        log = re.sub('<%s[\s\S][^<]+/>' % tag, rep, log, flags=(re.MULTILINE | re.DOTALL))
+        log = re.sub('<%s\s.*?</%s>' % (tag, tag), rep, log, flags=(re.MULTILINE | re.DOTALL))
     # TODO: generalize formatting and generalize these
     log = log.replace('<hr>', '')
-    for pattern in ('all', 'none'):
-        log = re.sub('<b>%s</b>' % pattern, pattern, log,
-                     flags=(re.MULTILINE | re.DOTALL))
+    # TODO: Not sure why this is needed here again but it is, currently
+    log = re.sub('<a\s.*?</a>', '[link]', log, flags=(re.MULTILINE | re.DOTALL))
     # For debugging purposes, save the log that goes
     # into the XML element tree
     with open('log_tmp.xml', 'w') as fh:
@@ -172,9 +176,39 @@ def facilitator_to_tex_str(log, images_folder=None):
 
 def process_logs_from_s3():
     """Download logs from S3, extract dialogues, and save as PDF"""
-    pass
+    import os
+    import boto3
+    import tarfile
+    import subprocess
+    from io import BytesIO
+    s3 = boto3.client('s3')
+    contents = res = s3.list_objects(Bucket='cwc-hms',
+                                     Prefix='bob_ec2_logs')['Contents']
+    # Here we only get the tar.gz files which contain the logs for the
+    # facilitator
+    keys = [content['Key'] for content in contents if
+            content['Key'].startswith('bob_ec2_logs/cwc-integ') and
+            content['Key'].endswith('.tar.gz')]
+    print('Found %d keys' % len(keys))
 
-
+    for key in keys:
+        basename = os.path.basename(key)
+        res = s3.get_object(Bucket='cwc-hms', Key=key)
+        byte_stream = BytesIO(res['Body'].read())
+        with tarfile.open(None, 'r', fileobj=byte_stream) as tarf:
+            fnames = tarf.getnames()
+            facls = [n for n in fnames if n.endswith('facilitator.log')]
+            if not facls:
+                print('No facilitator.log found for %s' % key)
+                continue
+            facl = facls[0]
+            efo = tarf.extractfile(facl)
+            log_txt = efo.read().decode('utf-8')
+            full_latex = facilitator_to_tex_str(log_txt)
+            print('Writing tex to %s.tex' % basename)
+            with open('logs/%s.tex' % basename, 'w') as fh:
+                fh.write(full_latex)
+            subprocess.run(['pdflatex', 'logs/%s.tex' % basename])
 
 
 if __name__ == '__main__':
