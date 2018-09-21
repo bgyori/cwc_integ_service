@@ -19,6 +19,20 @@ app.config["MONGO_URI"] = 'mongodb://localhost:27017/myDatabase'
 app.config['SECRET_KEY'] = 'dev_key'
 mongo = PyMongo(app)
 Bootstrap(app)
+MY_CONTAINER_LIST = 'cwc_service_containers.txt'
+
+
+def _record_my_container(cont_id):
+    with open(MY_CONAINER_LIST, 'r') as f:
+        known_ids = f.read().splitlines()
+
+    if cont_id not in known_ids:
+        print("Adding %s to list of my containers." % cont_idi)
+        with open(MY_CONAINER_LIST, 'a') as f:
+            f.write('%s\n' % cont_id)
+    else:
+        print("This container was already registered.")
+    return
 
 
 def get_increment_port():
@@ -165,6 +179,7 @@ def _run_container(port, expose_port):
                                  ports={('%d/tcp' % expose_port): port})
     print('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
+    _record_my_container(cont.id)
     return cont.id
 
 
