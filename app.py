@@ -22,17 +22,22 @@ mongo = PyMongo(app)
 Bootstrap(app)
 MY_CONTAINER_LIST = 'cwc_service_containers.txt'
 TIME_FMT = '%Y%m%d%H%M%S'
+MAX_TIME = 172800  # two days in seconds.
 
 
-def _record_my_container(cont_id, action):
-    assert action in ['add', 'remove'], "Invalid action: %s" % action
-
+def _load_id_dict():
     with open(MY_CONAINER_LIST, 'r') as f:
         known_ids = f.read().splitlines()
     id_dict = {}
     for id_str in known_ids:
         date_str, cont_id = id_str.split(':')
         id_dict[cont_id] = datetime.strptime(date_str, TIME_STR)
+    return id_dict
+
+
+def _record_my_container(cont_id, action):
+    assert action in ['add', 'remove'], "Invalid action: %s" % action
+    id_dict = _load_id_dict()
 
     if cont_id not in id_dict.keys():
         if action == 'add':
@@ -49,13 +54,22 @@ def _record_my_container(cont_id, action):
             print("This container was already registered.")
             return False
         elif aciton == 'remove':
-            date = known_ids.pop(cont_id)
+            date = id_dict.pop(cont_id)
             print("Removing %s from list of my containers which was started "
                   "at %s." % (cont_id, date))
             with open(MY_CONTAINER_LIST, 'w') as f:
                 f.write('\n'.join('{date}:{id}'.format(date=date, id=id_str)
                                   for id_str, date in id_dict.items()))
             return True
+
+
+def _check_timers():
+    now = datetime.now()
+    id_dict = _load_id_dict()
+    for cont_id, date in id_dict.items():
+        if (now - date).seconds > MAX_TIME:
+            _stop_container(cont_id)
+    return
 
 
 def get_increment_port():
@@ -182,6 +196,11 @@ def launch_sbgn():
 def stop_session(cont_id):
     print("Request to end %s." % cont_id)
     assert cont_id, "Bad request. Need an id."
+    _stop_container(cont_id)
+    return 'Success!', 200
+
+
+def _stop_container(cont_id):
     assert _record_my_container(cont_id, 'remove'), \
         "Could not remove container because it is not my own."
     client = docker.from_env()
@@ -192,7 +211,7 @@ def stop_session(cont_id):
     cont.remove()
     print("Container removed.")
     decrement_sessions()
-    return 'Success!', 200 
+    return
 
 
 def _run_container(port, expose_port):
