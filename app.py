@@ -1,5 +1,6 @@
 import time
 import docker
+from datetime import datetime
 from flask import Flask, redirect, render_template, url_for, request, flash
 from flask_wtf import Form
 from flask_pymongo import PyMongo
@@ -20,6 +21,7 @@ app.config['SECRET_KEY'] = 'dev_key'
 mongo = PyMongo(app)
 Bootstrap(app)
 MY_CONTAINER_LIST = 'cwc_service_containers.txt'
+TIME_FMT = '%Y%m%d%H%M%S'
 
 
 def _record_my_container(cont_id, action):
@@ -27,12 +29,17 @@ def _record_my_container(cont_id, action):
 
     with open(MY_CONAINER_LIST, 'r') as f:
         known_ids = f.read().splitlines()
+    id_dict = {}
+    for id_str in known_ids:
+        date_str, cont_id = id_str.split(':')
+        id_dict[cont_id] = datetime.strptime(date_str, TIME_STR)
 
-    if cont_id not in known_ids:
+    if cont_id not in id_dict.keys():
         if action == 'add':
             print("Adding %s to list of my containers." % cont_id)
+            now_str = datetime.now().strftime(TIME_FMT)
             with open(MY_CONAINER_LIST, 'a') as f:
-                f.write('%s\n' % cont_id)
+                f.write('{date}:{id}\n'.format(date=now_str, id=cont_id))
             return True
         elif action == 'remove':
             print("This container isn't mine or doesn't exist.")
@@ -42,10 +49,12 @@ def _record_my_container(cont_id, action):
             print("This container was already registered.")
             return False
         elif aciton == 'remove':
-            print("Removing %s from list of my containers." % cont_id)
-            known_ids.remove(cont_id)
+            date = known_ids.pop(cont_id)
+            print("Removing %s from list of my containers which was started "
+                  "at %s." % (cont_id, date))
             with open(MY_CONTAINER_LIST, 'w') as f:
-                f.write('\n'.join(known_ids))
+                f.write('\n'.join('{date}:{id}'.format(date=date, id=id_str)
+                                  for id_str, date in id_dict.items()))
             return True
 
 
