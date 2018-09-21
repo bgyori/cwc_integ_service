@@ -22,17 +22,31 @@ Bootstrap(app)
 MY_CONTAINER_LIST = 'cwc_service_containers.txt'
 
 
-def _record_my_container(cont_id):
+def _record_my_container(cont_id, action):
+    assert action in ['add', 'remove'], "Invalid action: %s" % action
+
     with open(MY_CONAINER_LIST, 'r') as f:
         known_ids = f.read().splitlines()
 
     if cont_id not in known_ids:
-        print("Adding %s to list of my containers." % cont_idi)
-        with open(MY_CONAINER_LIST, 'a') as f:
-            f.write('%s\n' % cont_id)
+        if action == 'add':
+            print("Adding %s to list of my containers." % cont_id)
+            with open(MY_CONAINER_LIST, 'a') as f:
+                f.write('%s\n' % cont_id)
+            return True
+        elif action == 'remove':
+            print("This container isn't mine or doesn't exist.")
+            return False
     else:
-        print("This container was already registered.")
-    return
+        if action == 'add':
+            print("This container was already registered.")
+            return False
+        elif aciton == 'remove':
+            print("Removing %s from list of my containers." % cont_id)
+            known_ids.remove(cont_id)
+            with open(MY_CONTAINER_LIST, 'w') as f:
+                f.write('\n'.join(known_ids))
+            return True
 
 
 def get_increment_port():
@@ -45,6 +59,7 @@ def get_increment_port():
         mongo.db.ports.update_one({'port': port}, {'$set': {'port': port + 1}})
         port += 1
     return port
+
 
 def reset_sessions():
     print('Resetting sessions')
@@ -158,6 +173,8 @@ def launch_sbgn():
 def stop_session(cont_id):
     print("Request to end %s." % cont_id)
     assert cont_id, "Bad request. Need an id."
+    assert _record_my_container(cont_id, 'remove'), \
+        "Could not remove container because it is not my own."
     client = docker.from_env()
     cont = client.containers.get(cont_id)
     print("Got client %s, aka %s." % (cont.id, cont.name))
@@ -179,7 +196,7 @@ def _run_container(port, expose_port):
                                  ports={('%d/tcp' % expose_port): port})
     print('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
-    _record_my_container(cont.id)
+    _record_my_container(cont.id, 'add')
     return cont.id
 
 
