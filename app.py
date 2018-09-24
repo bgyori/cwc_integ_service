@@ -1,4 +1,5 @@
 import time
+import json
 import docker
 from datetime import datetime
 from flask import Flask, redirect, render_template, url_for, request, flash
@@ -20,19 +21,33 @@ app.config["MONGO_URI"] = 'mongodb://localhost:27017/myDatabase'
 app.config['SECRET_KEY'] = 'dev_key'
 mongo = PyMongo(app)
 Bootstrap(app)
-MY_CONTAINER_LIST = 'cwc_service_containers.txt'
+MY_CONTAINER_LIST = 'cwc_service_containers.json'
 TIME_FMT = '%Y%m%d%H%M%S'
 MAX_TIME = 172800  # two days in seconds.
 
 
-def _load_id_dict():
-    with open(MY_CONAINER_LIST, 'r') as f:
-        known_ids = f.read().splitlines()
-    id_dict = {}
-    for id_str in known_ids:
-        date_str, cont_id = id_str.split(':')
-        id_dict[cont_id] = datetime.strptime(date_str, TIME_STR)
-    return id_dict
+class Tracker(object):
+    def __init__(self):
+        self.id_dict = {}
+        
+    def _load_id_dict(self):
+        if not path.exists(MY_CONTAINER_LIST):
+            return
+        with open(MY_CONAINER_LIST, 'r') as f:
+            id_dict_strs = json.load(f)
+        for id_val, date_str in id_dict_strs.items():
+            self.id_dict[id_val] = datetime.strptime(date_str, TIME_STR)
+        return
+
+    def _dump_id_dict(self):
+        json_dict = {}
+        for id_val, date in self.id_dict.items():
+            json_dict[id_val] = date.strftime(TIME_STR)
+        with open(MY_CONTAINER_LIST, 'w') as f:
+            json.dump(json_dict, f)
+        return
+    
+    def add_container(self):
 
 
 def _record_my_container(cont_id, action):
