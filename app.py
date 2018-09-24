@@ -231,12 +231,13 @@ def stop_session(cont_id):
     return 'Success!', 200
 
 
-def _stop_container(cont_id):
-    assert _record_my_container(cont_id, 'remove'), \
-        "Could not remove container because it is not my own."
+def _stop_container(cont_id, remove_record=True):
+    if remove_record:
+        assert _record_my_container(cont_id, 'remove'), \
+            "Could not remove container because it is not my own."
     client = docker.from_env()
     cont = client.containers.get(cont_id)
-    print("Got client %s, aka %s." % (cont.id, cont.name))
+    print("Got container %s, aka %s." % (cont.id, cont.name))
     get_logs_for_container(cont)
     cont.stop()
     cont.remove()
@@ -259,5 +260,33 @@ def _run_container(port, expose_port):
     return cont.id
 
 
+def cleanup():
+    print("+" + "-"*78 + "+")
+    print("| %-76s |" % "Grabbing logs, stopping, and removing all docker containers...")
+    print("| %-76s |" % "Please wait, as this may take a while.")
+    print("+" + "-"*78 + "+")
+    id_dict = _load_id_dict()
+    num_conts = len(id_dict)
+    for i, (cont_id, start_date) in enumerate(id_dict.items()):
+        try:
+            print("(%d/%d) Resolving %s...." % (i+1, num_conts, cont_id))
+            _stop_container(cont_id)
+        except KeyboardInterrupt:
+            print("Are you sure you want to stop this? If so, hit Ctrl-C again.")
+            sleep(5)
+        except Exception as e:
+            print("Faild to shut down the container: %s!" % (cont_id))
+            print("Reasion:")
+            print(e)
+            print("Continuing...")
+    print("+" + "-"*78 + "+")
+    print("| %-76s |" % "All done! Have a nice day! :)")
+    print("+" + "-"*78 + "+")
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    from sys import argv
+    if argv[1] == 'cleanup':
+        cleanup()
+    else:
+        app.run(host='0.0.0.0')
