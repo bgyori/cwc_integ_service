@@ -70,6 +70,7 @@ def _dump_on_s3(fname):
 
 
 def get_logs():
+    """Get logs from local Docker instances and upload them to S3."""
     client = docker.from_env()
     cont_list = client.containers.list(True)
     master_logs = []

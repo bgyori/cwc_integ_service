@@ -153,9 +153,9 @@ def facilitator_to_tex_str(log, images_folder=None):
                         img_name = images_folder + img_name
                     dialogues[-1].append(('Bob', ts, 'img', img_name))
         # Look for system utterance
-        if is_received_by(tag, 'keyboard'):
-            match = re.match(r'\(TELL :CONTENT \(SPOKEN :WHAT "(.*)"\)', msg,
-                             flags=(re.MULTILINE | re.DOTALL))
+        if is_sent_by(tag, 'GEN'):
+            match = re.match(r'\(REQUEST :CONTENT \(SAY "(.*)"\)', msg,
+                             flags=(re.MULTILINE | re.DOTALL | re.IGNORECASE))
             if match:
                 txt = match.groups()[0]
                 txt = reformat_text(txt)
