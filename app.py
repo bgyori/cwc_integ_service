@@ -86,6 +86,12 @@ def has_token(token):
 
 
 def _launch_app(interface_port_num, app_name, extension=''):
+    num_sessions = get_num_sessions()
+    if num_sessions >= MAX_SESSIONS:
+        print('Number of sessions: %d' % num_sessions)
+        # TODO: this should be part of the index page with buttons
+        # greyed out
+        return 'There are currently too many sessions, please come back later.'
     # Here we check if the same token was already used to start a session
     token = request.form['csrf_token']
     if has_token(token):
@@ -118,17 +124,10 @@ class SbgnForm(Form):
 
 @app.route('/')
 def hello():
-    num_sessions = get_num_sessions()
-    if num_sessions < MAX_SESSIONS:
-        clic_form = ClicForm()
-        sbgn_form = SbgnForm()
-        kwargs = {'clic_form': clic_form, 'sbgn_form': sbgn_form}
-        return render_template('index.html', **kwargs)
-    else:
-        print('Number of sessions: %d' % num_sessions)
-        # TODO: this should be part of the index page with buttons
-        # greyed out
-        return 'There are currently too many sessions, please come back later.'
+    clic_form = ClicForm()
+    sbgn_form = SbgnForm()
+    kwargs = {'clic_form': clic_form, 'sbgn_form': sbgn_form}
+    return render_template('index.html', **kwargs)
 
 
 @app.route('/launch_clic', methods=['POST'])
