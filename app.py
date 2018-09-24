@@ -271,9 +271,6 @@ def cleanup():
         try:
             print("(%d/%d) Resolving %s...." % (i+1, num_conts, cont_id))
             _stop_container(cont_id)
-        except KeyboardInterrupt:
-            print("Are you sure you want to stop this? If so, hit Ctrl-C again.")
-            sleep(5)
         except Exception as e:
             print("Faild to shut down the container: %s!" % (cont_id))
             print("Reasion:")
