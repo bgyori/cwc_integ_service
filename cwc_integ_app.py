@@ -2,6 +2,7 @@ import re
 import time
 import json
 import docker
+from os import path
 from datetime import datetime
 from flask import Flask, redirect, render_template, url_for, request, flash
 from flask_wtf import Form
@@ -34,14 +35,14 @@ def _load_id_dict():
     with open(MY_CONAINER_LIST, 'r') as f:
         id_dict_strs = json.load(f)
     for id_val, date_str in id_dict_strs.items():
-        id_dict[id_val] = datetime.strptime(date_str, TIME_STR)
+        id_dict[id_val] = datetime.strptime(date_str, TIME_FMT)
     return id_dict
 
 
 def _dump_id_dict(id_dict):
     json_dict = {}
     for id_val, date in id_dict.items():
-        json_dict[id_val] = date.strftime(TIME_STR)
+        json_dict[id_val] = date.strftime(TIME_FMT)
     with open(MY_CONTAINER_LIST, 'w') as f:
         json.dump(json_dict, f)
     return
