@@ -32,7 +32,7 @@ def _load_id_dict():
     if not path.exists(MY_CONTAINER_LIST):
         return {}
     id_dict = {}
-    with open(MY_CONAINER_LIST, 'r') as f:
+    with open(MY_CONTAINER_LIST, 'r') as f:
         id_dict_strs = json.load(f)
     for id_val, date_str in id_dict_strs.items():
         id_dict[id_val] = datetime.strptime(date_str, TIME_FMT)
@@ -65,7 +65,7 @@ def _record_my_container(cont_id, action):
         if action == 'add':
             print("This container was already registered.")
             success = False
-        elif aciton == 'remove':
+        elif action == 'remove':
             date = id_dict.pop(cont_id)
             print("Removing %s from list of my containers which was started "
                   "at %s." % (cont_id, date))
@@ -86,13 +86,19 @@ def _check_timers():
     id_dict = _load_id_dict()
 
     # Go through all the containers...
+    client = docker.from_env()
     for cont_id, start_date in id_dict.items():
 
         # Grab the date from the latest SPG log entry.
         cont = client.containers.get(cont_id)
         cont_logs = cont.logs()
-        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]', cont_logs)
-        latest_log_date = datetime.strptime(date_strings[-1], '%m/%d/%Y %H:%M:%S')
+        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]', cont_logs.decode('utf-8'))
+        if date_strings:
+            latest_log_date = datetime.strptime(date_strings[-1], '%m/%d/%Y %H:%M:%S')
+        else:
+            print("WARNING: Did not find any date strings in container logs "
+                  "for %s." % cont_id)
+            latest_log_date = start_date
 
         # Check both whether the logs have been silent for more than a day
         # (neglect) or whether the session has been running for more than 5
