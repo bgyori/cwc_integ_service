@@ -1,3 +1,4 @@
+import re
 import time
 import json
 import docker
@@ -23,7 +24,7 @@ mongo = PyMongo(app)
 Bootstrap(app)
 MY_CONTAINER_LIST = 'cwc_service_containers.json'
 TIME_FMT = '%Y%m%d%H%M%S'
-MAX_TIME = 172800  # two days in seconds.
+DAY = 86400  # a day in seconds.
 
 
 def _load_id_dict():
@@ -47,6 +48,7 @@ def _dump_id_dict(id_dict):
 
 
 def _record_my_container(cont_id, action):
+    """Update the json containing the statuses of the containers."""
     assert action in ['add', 'remove'], "Invalid action: %s" % action
     id_dict = _load_id_dict()
 
@@ -72,10 +74,30 @@ def _record_my_container(cont_id, action):
 
 
 def _check_timers():
-    now = datetime.now()
+    """Look through the containers and stop any timed-out containers."""
+    # The logs are utc time, and this generally avoids any time-zone issues.
+    # Won't work in python 2.
+    now = datetime.utcnow()
+
+    # This is not connected to the other dict instances deliberately. Do not
+    # try to make the dict shared, because the below for-loop could then have
+    # issues modifying an object while iterating over it.
     id_dict = _load_id_dict()
-    for cont_id, date in id_dict.items():
-        if (now - date).seconds > MAX_TIME:
+
+    # Go through all the containers...
+    for cont_id, start_date in id_dict.items():
+
+        # Grab the date from the latest SPG log entry.
+        cont = client.containers.get(cont_id)
+        cont_logs = cont.logs()
+        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]', cont_logs)
+        latest_log_date = datetime.strptime(date_strings[-1], '%m/%d/%Y %H:%M:%S')
+
+        # Check both whether the logs have been silent for more than a day
+        # (neglect) or whether the session has been running for more than 5
+        # days (hogging).
+        if (now - latest_log_date).seconds > DAY \
+           or (now - start_date).seconds > 5*DAY:
             _stop_container(cont_id)
     return
 
@@ -146,6 +168,7 @@ def has_token(token):
 
 
 def _launch_app(interface_port_num, app_name, extension=''):
+    _check_timers()
     num_sessions = get_num_sessions()
     if num_sessions >= MAX_SESSIONS:
         print('Number of sessions: %d' % num_sessions)
