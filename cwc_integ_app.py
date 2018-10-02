@@ -12,6 +12,9 @@ from wtforms import SubmitField
 
 from get_logs import get_logs_for_container
 
+import logging
+
+logger = logging.getLogger('cwc-web-service')
 
 MAX_SESSIONS = 8
 class SessionLimitExceeded(Exception):
@@ -56,18 +59,18 @@ def _record_my_container(cont_id, action):
     success = True
     if cont_id not in id_dict.keys():
         if action == 'add':
-            print("Adding %s to list of my containers." % cont_id)
+            logger.info("Adding %s to list of my containers." % cont_id)
             id_dict[cont_id] = datetime.utcnow()
         elif action == 'remove':
-            print("This container isn't mine or doesn't exist.")
+            logger.info("This container isn't mine or doesn't exist.")
             success = False
     else:
         if action == 'add':
-            print("This container was already registered.")
+            logger.info("This container was already registered.")
             success = False
         elif action == 'remove':
             date = id_dict.pop(cont_id)
-            print("Removing %s from list of my containers which was started "
+            logger.info("Removing %s from list of my containers which was started "
                   "at %s." % (cont_id, date))
     if success:
         _dump_id_dict(id_dict)
@@ -84,10 +87,12 @@ def _check_timers():
     # try to make the dict shared, because the below for-loop could then have
     # issues modifying an object while iterating over it.
     id_dict = _load_id_dict()
+    logger.info("There are %d instances running." % len(id_dict))
 
     # Go through all the containers...
     client = docker.from_env()
     for cont_id, start_date in id_dict.items():
+        logger.info("Examining %s" % cont_id)
 
         # Grab the date from the latest SPG log entry.
         cont = client.containers.get(cont_id)
@@ -96,15 +101,22 @@ def _check_timers():
         if date_strings:
             latest_log_date = datetime.strptime(date_strings[-1], '%m/%d/%Y %H:%M:%S')
         else:
-            print("WARNING: Did not find any date strings in container logs "
+            logger.info("WARNING: Did not find any date strings in container logs "
                   "for %s." % cont_id)
             latest_log_date = start_date
 
         # Check both whether the logs have been silent for more than a day
         # (neglect) or whether the session has been running for more than 5
         # days (hogging).
-        if (now - latest_log_date).seconds > DAY \
-           or (now - start_date).seconds > 5*DAY:
+        log_stalled = (now - latest_log_date).seconds
+        total_dur = (now - start_date).seconds
+        if log_stalled > 3600:
+            logger.info("Container %s timed out after %d seconds of empty logs."
+                  % (cont_id, log_stalled))
+            _stop_container(cont_id)
+        elif total_dur > DAY/2:
+            logger.info("Container %s timed out after %d seconds of running."
+                  % (cont_id, total_dur))
             _stop_container(cont_id)
     return
 
@@ -122,7 +134,7 @@ def get_increment_port():
 
 
 def reset_sessions():
-    print('Resetting sessions')
+    logger.info('Resetting sessions')
     sessions_json = mongo.db.sessions.find_one()
     if sessions_json is None:
         mongo.db.sessions.insert_one({'num_sessions': 0})
@@ -178,7 +190,7 @@ def _launch_app(interface_port_num, app_name, extension=''):
     _check_timers()
     num_sessions = get_num_sessions()
     if num_sessions >= MAX_SESSIONS:
-        print('Number of sessions: %d' % num_sessions)
+        logger.info('Number of sessions: %d' % num_sessions)
         # TODO: this should be part of the index page with buttons
         # greyed out
         return 'There are currently too many sessions, please come back later.'
@@ -196,9 +208,9 @@ def _launch_app(interface_port_num, app_name, extension=''):
     port = get_increment_port()
     base_host = 'http://' + str(request.host).split(':')[0]
     host = base_host + (':%d' % port + extension)
-    print('Will redirect to address: %s' % host)
+    logger.info('Will redirect to address: %s' % host)
     cont_id = _run_container(port, interface_port_num)
-    print('Start redirecting %s interface.' % app_name)
+    logger.info('Start redirecting %s interface.' % app_name)
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
                            time_out=90)
@@ -232,7 +244,7 @@ def launch_sbgn():
 
 @app.route('/end_session/<cont_id>', methods=['DELETE'])
 def stop_session(cont_id):
-    print("Request to end %s." % cont_id)
+    logger.info("Request to end %s." % cont_id)
     assert cont_id, "Bad request. Need an id."
     _stop_container(cont_id)
     return 'Success!', 200
@@ -244,24 +256,24 @@ def _stop_container(cont_id, remove_record=True):
             "Could not remove container because it is not my own."
     client = docker.from_env()
     cont = client.containers.get(cont_id)
-    print("Got container %s, aka %s." % (cont.id, cont.name))
+    logger.info("Got container %s, aka %s." % (cont.id, cont.name))
     get_logs_for_container(cont)
     cont.stop()
     cont.remove()
-    print("Container removed.")
+    logger.info("Container removed.")
     decrement_sessions()
     return
 
 
 def _run_container(port, expose_port):
     num_sessions = increment_sessions()
-    print('We now have %d active sessions' % num_sessions)
+    logger.info('We now have %d active sessions' % num_sessions)
     client = docker.from_env()
     cont = client.containers.run('cwc-integ:latest',
                                  '/sw/cwc-integ/startup.sh',
                                  detach=True,
                                  ports={('%d/tcp' % expose_port): port})
-    print('Launched container %s exposing port %d via port %d' %
+    logger.info('Launched container %s exposing port %d via port %d' %
           (cont, expose_port, port))
     _record_my_container(cont.id, 'add')
     return cont.id
@@ -279,10 +291,10 @@ def cleanup():
             print("(%d/%d) Resolving %s...." % (i+1, num_conts, cont_id))
             _stop_container(cont_id)
         except Exception as e:
-            print("Faild to shut down the container: %s!" % (cont_id))
-            print("Reasion:")
-            print(e)
-            print("Continuing...")
+            logger.error("Faild to shut down the container: %s!" % (cont_id))
+            logger.error("Reasion:")
+            logger.exception(e)
+            logger.info("Continuing...")
     print("+" + "-"*78 + "+")
     print("| %-76s |" % "All done! Have a nice day! :)")
     print("+" + "-"*78 + "+")
