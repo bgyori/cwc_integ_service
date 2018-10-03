@@ -15,6 +15,10 @@ from get_logs import get_logs_for_container
 import logging
 
 logger = logging.getLogger('cwc-web-service')
+guni_logger = logging.getLogger('gunicorn.error')
+logger.handlers.extend(guni_logger.handlers)
+logger.setLevel(logging.INFO)
+logger.info("Logging is working!")
 
 MAX_SESSIONS = 8
 class SessionLimitExceeded(Exception):
@@ -187,7 +191,6 @@ def has_token(token):
 
 
 def _launch_app(interface_port_num, app_name, extension=''):
-    _check_timers()
     num_sessions = get_num_sessions()
     if num_sessions >= MAX_SESSIONS:
         logger.info('Number of sessions: %d' % num_sessions)
@@ -280,6 +283,7 @@ def _run_container(port, expose_port):
 
 
 def cleanup():
+    """Stop all the currently running containers and remove."""
     print("+" + "-"*78 + "+")
     print("| %-76s |" % "Grabbing logs, stopping, and removing all docker containers...")
     print("| %-76s |" % "Please wait, as this may take a while.")
