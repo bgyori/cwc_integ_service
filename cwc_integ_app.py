@@ -309,7 +309,7 @@ def monitor():
     logger.info("Monitor starting.")
     try:
         while True:
-            sleep(60*15)  # every 15 minutes
+            time.sleep(60*15)  # every 15 minutes
             logger.info("Checking session in monitor...")
             _check_timers()
     except BaseException as e:
