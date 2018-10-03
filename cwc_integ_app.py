@@ -135,15 +135,6 @@ def get_increment_port():
     return port
 
 
-def reset_sessions():
-    logger.info('Resetting sessions')
-    sessions_json = mongo.db.sessions.find_one()
-    if sessions_json is None:
-        mongo.db.sessions.insert_one({'num_sessions': 0})
-    else:
-        mongo.db.sessions.update_one({}, {'$set': {'num_sessions': 0}})
-
-
 def get_num_sessions():
     sessions_json = mongo.db.sessions.find_one()
     if not sessions_json:
@@ -280,6 +271,16 @@ def _run_container(port, expose_port):
     return cont.id
 
 
+def reset_sessions():
+    """Reset all the db sessions."""
+    logger.info('Resetting sessions')
+    sessions_json = mongo.db.sessions.find_one()
+    if sessions_json is None:
+        mongo.db.sessions.insert_one({'num_sessions': 0})
+    else:
+        mongo.db.sessions.update_one({}, {'$set': {'num_sessions': 0}})
+
+
 def cleanup():
     """Stop all the currently running containers and remove."""
     logger.info("Starting cleanup.")
@@ -319,12 +320,13 @@ def monitor():
 
 if __name__ == '__main__':
     from sys import argv
+    logger.setLevel(logging.INFO)
     if argv[1] == 'cleanup':
-        logger.setLevel(logging.INFO)
         cleanup()
     elif argv[1] == 'monitor':
-        logger.setLevel(logging.INFO)
         monitor()
+    elif argv[1] == 'reset':
+        reset_sessions()
     else:
         guni_logger = logging.getLogger('gunicorn.error')
         logger.handlers.extend(guni_logger.handlers)
