@@ -15,10 +15,8 @@ from get_logs import get_logs_for_container
 import logging
 
 logger = logging.getLogger('cwc-web-service')
-guni_logger = logging.getLogger('gunicorn.error')
-logger.handlers.extend(guni_logger.handlers)
-logger.setLevel(logging.INFO)
-logger.info("Logging is working!")
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(asctime)s] %(name)s.%(levelname)s - %(funcName)s@%(lineno)s: %(message)s')
 
 MAX_SESSIONS = 8
 class SessionLimitExceeded(Exception):
@@ -284,6 +282,7 @@ def _run_container(port, expose_port):
 
 def cleanup():
     """Stop all the currently running containers and remove."""
+    logger.info("Starting cleanup.")
     print("+" + "-"*78 + "+")
     print("| %-76s |" % "Grabbing logs, stopping, and removing all docker containers...")
     print("| %-76s |" % "Please wait, as this may take a while.")
@@ -321,8 +320,14 @@ def monitor():
 if __name__ == '__main__':
     from sys import argv
     if argv[1] == 'cleanup':
+        logger.setLevel(logging.INFO)
         cleanup()
     elif argv[1] == 'monitor':
+        logger.setLevel(logging.INFO)
         monitor()
     else:
+        guni_logger = logging.getLogger('gunicorn.error')
+        logger.handlers.extend(guni_logger.handlers)
+        logger.setLevel(logging.INFO)
+        logger.info("Logging is working!")
         app.run(host='0.0.0.0')
