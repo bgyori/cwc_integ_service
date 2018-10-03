@@ -1,0 +1,4 @@
+#!/bin/bash
+
+pkill -f cwc_integ_app 
+python3 cwc_integ_app.py cleanup
