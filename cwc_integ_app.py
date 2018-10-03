@@ -304,9 +304,25 @@ def cleanup():
     print("+" + "-"*78 + "+")
 
 
+def monitor():
+    """Check session timers and clean up old session periodically."""
+    logger.info("Monitor starting.")
+    try:
+        while True:
+            sleep(60*15)  # every 15 minutes
+            logger.info("Checking session in monitor...")
+            _check_timers()
+    except BaseException as e:
+        logger.info("Monitor is closing with:")
+        logger.exception(e)
+    return
+
+
 if __name__ == '__main__':
     from sys import argv
     if argv[1] == 'cleanup':
         cleanup()
+    elif argv[1] == 'monitor':
+        monitor()
     else:
         app.run(host='0.0.0.0')
