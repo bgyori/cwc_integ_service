@@ -14,9 +14,14 @@ from get_logs import get_logs_for_container
 
 import logging
 
+LOGGING_FMT = ('[%(asctime)s] %(levelname)s '
+               '- %(funcName)s@%(lineno)s: %(message)s')
+
 logger = logging.getLogger('cwc-web-service')
-logging.basicConfig(level=logging.DEBUG,
-                    format='[%(asctime)s] %(name)s.%(levelname)s - %(funcName)s@%(lineno)s: %(message)s')
+guni_logger = logging.getLogger('gunicorn.error')
+logger.handlers.extend(guni_logger.handlers)
+logging.basicConfig(level=logging.INFO, format=LOGGING_FMT)
+logger.info("Logging is working!")
 
 MAX_SESSIONS = 8
 class SessionLimitExceeded(Exception):
@@ -312,24 +317,22 @@ def monitor():
             time.sleep(60*15)  # every 15 minutes
             logger.info("Checking session in monitor...")
             _check_timers()
+            logger.info("Check complete. Waiting...")
     except BaseException as e:
         logger.info("Monitor is closing with:")
         logger.exception(e)
     return
 
-
 if __name__ == '__main__':
     from sys import argv
-    logger.setLevel(logging.INFO)
     if argv[1] == 'cleanup':
+        logging.basicConfig(level=logging.INFO, format=LOGGING_FMT)
         cleanup()
     elif argv[1] == 'monitor':
+        logging.basicConfig(level=logging.INFO, format=LOGGING_FMT)
         monitor()
     elif argv[1] == 'reset':
+        logging.basicConfig(level=logging.INFO, format=LOGGING_FMT)
         reset_sessions()
     else:
-        guni_logger = logging.getLogger('gunicorn.error')
-        logger.handlers.extend(guni_logger.handlers)
-        logger.setLevel(logging.INFO)
-        logger.info("Logging is working!")
         app.run(host='0.0.0.0')

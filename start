@@ -1,5 +1,5 @@
 #!/bin/bash
 
 python3 cwc_integ_app.py reset
-nohup gunicorn -w 4 -t 600 -b 0.0.0.0:8080 cwc_integ_app:app --access-logfile 'access.log' --log-file 'app.log' > gunicorn.log 2>&1 &
+nohup gunicorn -w 4 -t 600 -b 0.0.0.0:8080 cwc_integ_app:app --access-logfile 'access.log' --log-file 'app.log' &
 nohup python3 cwc_integ_app.py monitor > monitor.log 2>&1 &
