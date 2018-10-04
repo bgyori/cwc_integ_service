@@ -1,0 +1,29 @@
+.sys_utterance {
+    background-color: lightblue
+}
+
+.usr_utterance {
+    background-color: lightgreen
+}
+
+.sys_name {
+}
+
+.usr_name {
+}
+
+.msg_time {
+}
+
+.sys_msg {
+}
+
+.usr_msg {
+}
+
+@media (min-width: 1200px) {
+    .container{
+        max-width: 970px;
+    }
+}
+
