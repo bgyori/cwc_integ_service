@@ -77,15 +77,40 @@ def make_html(html_parts):
     return html
 
 
+def get_ba_msgs(soup):
+    ba_tags = soup.find_all('s', attrs={'r': 'BA'})
+    ba_msgs = [tag_to_message(tag) for tag in ba_tags]
+    return ba_msgs
+
+
+def get_start_time(soup):
+    # <LOG TIME="9:04 PM" DATE="7/26/18" FILE="facilitator.log">
+    log = soup.find('log')
+    start_time = log.attrs['date'] + ' ' + log.attrs['time']
+    return start_time
+
+
+def format_start_time(start_time):
+    html= """
+    <div class="row start_time">
+      <div class="col-sm">Dialogue started at: {start_time}</div>
+    </div>
+    """.format(start_time=start_time)
+    return textwrap.dedent(html)
+
+
 if __name__ == '__main__':
     with open(sys.argv[1], 'r') as fh:
         log = fh.read()
 
     soup = BeautifulSoup(log, 'html.parser')
-    # Find all messages received by the BA
-    ba_tags = soup.find_all('s', attrs={'r': 'BA'})
-    ba_msgs = [tag_to_message(tag) for tag in ba_tags]
     html_parts = ['<div class="container">']
+
+    start_time = get_start_time(soup)
+    html_parts.append(format_start_time(start_time))
+
+    # Find all messages received by the BA
+    ba_msgs = get_ba_msgs(soup)
     for msg in ba_msgs:
         if is_sys_utterance(msg):
             print('SYS: %s' % msg.content)
