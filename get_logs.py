@@ -1,5 +1,8 @@
+import os
 import boto3
 import docker
+import tarfile
+from io import BytesIO
 from datetime import datetime
 
 
@@ -85,6 +88,46 @@ def get_logs():
     for fname in log_arches + master_logs:
         _dump_on_s3(fname)
     return
+
+
+def get_logs_from_s3(folder=None, cached=True):
+    """Download logs from S3 and save into a local folder"""
+    import tqdm
+    s3 = boto3.client('s3')
+    contents = res = s3.list_objects(Bucket='cwc-hms',
+                                     Prefix='bob_ec2_logs')['Contents']
+    # Here we only get the tar.gz files which contain the logs for the
+    # facilitator
+    keys = [content['Key'] for content in contents if
+            content['Key'].startswith('bob_ec2_logs/cwc-integ') and
+            content['Key'].endswith('.tar.gz')]
+    print('Found %d keys' % len(keys))
+
+    for key in tqdm.tqdm(keys):
+        # Replace a couple of things in the key to make the actual fname
+        fname = key.replace('/', '_')
+        fname = fname.replace('bob_ec2_logs_cwc-integ:latest_', '')
+        fname = fname.replace('.tar.gz', '.txt')
+        if folder:
+            fname = os.path.join(folder, fname)
+        if cached and os.path.exists(fname):
+            print('File already exists: %s' % fname)
+            continue
+
+        res = s3.get_object(Bucket='cwc-hms', Key=key)
+        byte_stream = BytesIO(res['Body'].read())
+        with tarfile.open(None, 'r', fileobj=byte_stream) as tarf:
+            fnames = tarf.getnames()
+            facls = [n for n in fnames if n.endswith('facilitator.log')]
+            if not facls:
+                print('No facilitator.log found for %s' % key)
+                continue
+            facl = facls[0]
+            efo = tarf.extractfile(facl)
+            log_txt = efo.read().decode('utf-8')
+            with open(fname, 'w') as fh:
+                print('Writing file %s' % fname)
+                fh.write(log_txt)
 
 
 if __name__ == '__main__':
