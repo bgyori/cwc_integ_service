@@ -5,7 +5,7 @@ from kqml import *
 from bs4 import BeautifulSoup
 
 
-Message = namedtuple('Message', ['type', 'receiver', 'time', 'content'])
+Message = namedtuple('Message', ['type', 'receiver', 'time', 'content', 'sem'])
 
 
 def tag_to_message(tag):
@@ -13,28 +13,65 @@ def tag_to_message(tag):
     if msg_type == 's':
         receiver = tag.attrs['r']
     time = tag.attrs['t']
-    content_str = tag.text.strip()
+    content_str = ''.join([str(c) for c in tag.contents]).strip()
+    #content_str = tag.text.strip()
     content = KQMLPerformative.from_string(content_str)
-    msg = Message(type=msg_type, receiver=receiver, time=time, content=content)
+
+    # Add message semantics
+    sem_map = {
+            is_sys_utterance: 'sys_utterance',
+            is_user_utterance: 'user_utterance',
+            is_display_image: 'display_image',
+            is_add_provenance: 'add_provenance',
+            is_display_sbgn: 'display_sbgn'
+            }
+    sem = None
+    for fun, sem_value in sem_map.items():
+        if fun(content, receiver):
+            sem = sem_value
+            break
+    msg = Message(type=msg_type, receiver=receiver, time=time, content=content,
+                  sem=sem)
+
     return msg
 
 
-def is_sys_utterance(msg):
+def _is_type(msg, head, content_head):
     try:
-        return (msg.content.head().upper() == 'TELL' and
-                msg.content.get('content').head().upper() == 'SPOKEN')
+        return (msg.head().upper() == head.upper() and
+                msg.get('content').head().upper() == content_head.upper())
     except Exception as e:
         return False
 
 
-def is_user_utterance(msg):
-    try:
-        content = msg.content.get('content')
-        return (msg.content.head().upper() == 'TELL' and
-                content.head().upper() == 'UTTERANCE' and
-                msg.content.gets('sender').upper() == 'TEXTTAGGER')
-    except Exception as e:
+def is_display_image(msg, receiver):
+    return _is_type(msg, 'tell', 'display-image')
+
+
+def is_display_sbgn(msg, receiver):
+    return _is_type(msg, 'tell', 'display-sbgn')
+
+
+def is_add_provenance(msg, receiver):
+    return _is_type(msg, 'tell', 'add_provenance')
+
+
+def is_sys_utterance(msg, receiver):
+    if receiver and receiver.upper() == 'BA' and \
+        _is_type(msg, 'tell', 'spoken'):
+        return True
+    return False
+
+
+def is_user_utterance(msg, receiver):
+    if not receiver or receiver.upper() != 'BA':
         return False
+    sen = msg.gets('sender')
+    if not sen:
+        return False
+    if sen.upper() == 'TEXTTAGGER' and  _is_type(msg, 'tell', 'utterance'):
+        return True
+    return False
 
 
 def format_sys_utterance(msg):
@@ -77,10 +114,17 @@ def make_html(html_parts):
     return html
 
 
-def get_ba_msgs(soup):
-    ba_tags = soup.find_all('s', attrs={'r': 'BA'})
-    ba_msgs = [tag_to_message(tag) for tag in ba_tags]
-    return ba_msgs
+def get_io_msgs(soup):
+    io_msgs = []
+    tags = soup.find_all('s')
+    for tag in tags:
+        try:
+            msg = tag_to_message(tag)
+        except Exception:
+            continue
+        if msg.sem is not None:
+            io_msgs.append(msg)
+    return io_msgs
 
 
 def get_start_time(soup):
@@ -99,8 +143,11 @@ def format_start_time(start_time):
     return textwrap.dedent(html)
 
 
-if __name__ == '__main__':
-    with open(sys.argv[1], 'r') as fh:
+def log_file_to_html_file(log_file, html_file=None):
+    if html_file is None:
+        html_file = log_file[:-4] + '.html'
+
+    with open(log_file, 'r') as fh:
         log = fh.read()
 
     soup = BeautifulSoup(log, 'html.parser')
@@ -110,14 +157,20 @@ if __name__ == '__main__':
     html_parts.append(format_start_time(start_time))
 
     # Find all messages received by the BA
-    ba_msgs = get_ba_msgs(soup)
-    for msg in ba_msgs:
-        if is_sys_utterance(msg):
+    io_msgs = get_io_msgs(soup)
+    for msg in io_msgs:
+        if msg.sem == 'sys_utterance':
             print('SYS: %s' % msg.content)
             html_parts.append(format_sys_utterance(msg))
-        elif is_user_utterance(msg):
+        elif msg.sem == 'user_utterance':
             print('USER: %s' % msg.content)
             html_parts.append(format_user_utterance(msg))
     html_parts.append('</div>')
-    with open('test.html', 'w') as fh:
+
+    with open(html_file, 'w') as fh:
         fh.write(make_html(html_parts))
+
+
+if __name__ == '__main__':
+    log_file = sys.argv[1]
+    log_file_to_html_file(log_file)

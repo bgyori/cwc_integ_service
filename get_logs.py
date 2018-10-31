@@ -107,6 +107,7 @@ def get_logs_from_s3(folder=None, cached=True):
         # Replace a couple of things in the key to make the actual fname
         fname = key.replace('/', '_')
         fname = fname.replace('bob_ec2_logs_cwc-integ:latest_', '')
+        fname = fname.replace('bob_ec2_logs_cwc-integ_', '')
         fname = fname.replace('.tar.gz', '.txt')
         if folder:
             fname = os.path.join(folder, fname)
