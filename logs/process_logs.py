@@ -1,9 +1,11 @@
+import os
 import sys
 import textwrap
 from collections import namedtuple
 from kqml import *
 from bs4 import BeautifulSoup
 
+THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
 Message = namedtuple('Message', ['type', 'receiver', 'time', 'content', 'sem'])
 
@@ -107,7 +109,7 @@ def format_user_utterance(msg):
 
 
 def make_html(html_parts):
-    with open('page_template.html', 'r') as fh:
+    with open(os.path.join(THIS_DIR, 'page_template.html'), 'r') as fh:
         template = fh.read()
 
     html = template.replace('%%%CONTENT%%%', '\n'.join(html_parts))
