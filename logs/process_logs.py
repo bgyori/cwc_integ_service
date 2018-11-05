@@ -79,7 +79,7 @@ def is_user_utterance(msg, receiver):
 def format_sys_utterance(msg):
     msg_text = msg.content.get('content').gets('what')
     html = """
-    <div class="row sys_utterance">
+    <div class="row sys_utterance" style="margin-top: 15px">
       <div class="col-sm sys_name" 
            style="display:inline-block; color: #D0FA58">Bob</div>
       <div class="col-sm" style="display:inline-block;">&nbsp;</div>
@@ -87,7 +87,7 @@ def format_sys_utterance(msg):
            style="display:inline-block;">{time}</div>
     </div>
 
-    <div class="row sys_utterance">
+    <div class="row sys_utterance" style="margin-bottom: 15px">
       <div class="col-sm sys_msg">{txt}</div>
     </div>
     """.format(time=msg.time, txt=msg_text)
@@ -97,7 +97,7 @@ def format_sys_utterance(msg):
 def format_user_utterance(msg):
     msg_text = msg.content.get('content').gets('text')
     html = """
-    <div class="row usr_utterance">
+    <div class="row usr_utterance" style="margin-top: 15px">
       <div class="col-sm usr_name" 
         style="display:inline-block; color: #2ECCFA">User</div>
       <div class="col-sm" style="display:inline-block;">&nbsp;</div>
@@ -105,7 +105,7 @@ def format_user_utterance(msg):
            style="display:inline-block;">{time}</div>
     </div>
 
-    <div class="row usr_utterance">
+    <div class="row usr_utterance" style="margin-bottom: 15px">
       <div class="col-sm usr_msg">{txt}</div>
     </div>
     """.format(time=msg.time, txt=msg_text)
