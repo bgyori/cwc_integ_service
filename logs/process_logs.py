@@ -80,9 +80,11 @@ def format_sys_utterance(msg):
     msg_text = msg.content.get('content').gets('what')
     html = """
     <div class="row sys_utterance">
-      <div class="col-sm sys_name">Bob</div>
-      <div class="col-sm">&nbsp;</div>
-      <div class="col-sm text-right msg_time">{time}</div>
+      <div class="col-sm sys_name" 
+           style="display:inline-block; color: #D0FA58">Bob</div>
+      <div class="col-sm" style="display:inline-block;">&nbsp;</div>
+      <div class="col-sm text-right msg_time"
+           style="display:inline-block;">{time}</div>
     </div>
 
     <div class="row sys_utterance">
@@ -96,9 +98,11 @@ def format_user_utterance(msg):
     msg_text = msg.content.get('content').gets('text')
     html = """
     <div class="row usr_utterance">
-      <div class="col-sm usr_name">User</div>
-      <div class="col-sm">&nbsp;</div>
-      <div class="col-sm text-right msg_time">{time}</div>
+      <div class="col-sm usr_name" 
+        style="display:inline-block; color: #2ECCFA">User</div>
+      <div class="col-sm" style="display:inline-block;">&nbsp;</div>
+      <div class="col-sm text-right msg_time" 
+           style="display:inline-block;">{time}</div>
     </div>
 
     <div class="row usr_utterance">
