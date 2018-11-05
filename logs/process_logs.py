@@ -81,12 +81,7 @@ def format_sys_utterance(msg):
     html = """
     <div class="row sys_utterance" style="margin-top: 15px">
       <div class="col-sm sys_name">
-        <p style="background-color:#2E64FE;
-                  color: #FFFFFF">Bob:
-        </p>&nbsp;
-        <p style="color: #BDBDBD">
-          {time}
-        </p>
+        <p style="background-color:#2E64FE; color: #FFFFFF">Bob:</p>&nbsp;<p style="color: #BDBDBD">{time}</p>
       </div>
     </div>
 
@@ -102,12 +97,7 @@ def format_user_utterance(msg):
     html = """
     <div class="row usr_utterance" style="margin-top: 15px">
       <div class="col-sm usr_name">
-        <p style="background-color: #A5DF00;
-                  color: #FFFFFF">User:
-        </p>&nbsp;
-        <p style="color: #BDBDBD">
-          {time}
-        </p>
+        <p style="background-color: #A5DF00; color: #FFFFFF">User:</p>&nbsp;<p style="color: #BDBDBD">{time}</p>
       </div>
     </div>
 
