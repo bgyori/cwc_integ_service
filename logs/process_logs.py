@@ -80,13 +80,14 @@ def format_sys_utterance(msg):
     msg_text = msg.content.get('content').gets('what')
     html = """
     <div class="row sys_utterance" style="margin-top: 15px">
-      <div class="col-sm sys_name" 
-           style="display:inline-block; 
-                  background-color:#2E64FE;
-                  color: #FFFFFF">Bob</div>
-      <div class="col-sm" style="display:inline-block;">&nbsp;</div>
-      <div class="col-sm text-right msg_time"
-           style="display:inline-block;">{time}</div>
+      <div class="col-sm sys_name">
+        <p style="background-color:#2E64FE;
+                  color: #FFFFFF">Bob:
+        </p>&nbsp;
+        <p style="color: #BDBDBD">
+          {time}
+        </p>
+      </div>
     </div>
 
     <div class="row sys_utterance" style="margin-bottom: 15px">
@@ -100,13 +101,14 @@ def format_user_utterance(msg):
     msg_text = msg.content.get('content').gets('text')
     html = """
     <div class="row usr_utterance" style="margin-top: 15px">
-      <div class="col-sm usr_name" 
-        style="display:inline-block; 
-                  background-color: #A5DF00;
-                  color: #FFFFFF">User</div>
-      <div class="col-sm" style="display:inline-block;">&nbsp;</div>
-      <div class="col-sm text-right msg_time" 
-           style="display:inline-block;">{time}</div>
+      <div class="col-sm usr_name">
+        <p style="background-color: #A5DF00;
+                  color: #FFFFFF">User:
+        </p>&nbsp;
+        <p style="color: #BDBDBD">
+          {time}
+        </p>
+      </div>
     </div>
 
     <div class="row usr_utterance" style="margin-bottom: 15px">
