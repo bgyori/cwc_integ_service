@@ -1,9 +1,9 @@
 import os
+import re
 import sys
 import textwrap
 from collections import namedtuple
 from kqml import *
-from bs4 import BeautifulSoup
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -147,14 +147,42 @@ def format_start_time(start_time):
     return textwrap.dedent(html)
 
 
+class CwcLog(object):
+    """Object to organize the logs retrieved from cwc facilitator.log."""
+    section_patt = re.compile('<(?P<type>S|R)\s+T=\"(?P<time>.*?)\"\s+'
+                              '(?P<other_type>S|R)=\"(?P<sender>\w+)\">'
+                              '\s+(?P<msg>.*?)\s+</(?P=type)>', re.DOTALL)
+    time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
+
+    def __init__(self, log_file):
+        with open(log_file, 'r') as f:
+            self.__log = f.read()
+        tp = self.time_patt.search(self.__log)
+        assert tp is not None, "Failed to get time string."
+        self.start_time = ' '.join(tp.groups())
+        sec_list = self.section_patt.findall(self.__log)
+        assert sec_list, "Failed to find any sections."
+        self.sent = []
+        self.received = []
+        self.all = []
+        for typ, dt, other_type, partner, msg in sec_list:
+            entry = {'type': typ, 'time': dt, 'msg': msg}
+            if typ == 'S':
+                entry['receiver'] = partner
+                self.sent.append(entry)
+            else:
+                entry['sender'] = partner
+                self.received.append(entry)
+            self.all.append(entry)
+        return
+
+
 def log_file_to_html_file(log_file, html_file=None):
     if html_file is None:
         html_file = log_file[:-4] + '.html'
 
-    with open(log_file, 'r') as fh:
-        log = fh.read()
+    log = CwcLog(log_file)
 
-    soup = BeautifulSoup(log, 'html.parser')
     html_parts = ['<div class="container">']
 
     start_time = get_start_time(soup)
