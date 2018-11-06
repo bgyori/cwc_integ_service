@@ -2,49 +2,59 @@ import os
 import re
 import sys
 import textwrap
-from collections import namedtuple
+
+import logging
+
+logger = logging.getLogger('log_processor')
+
 from kqml import *
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
-Message = namedtuple('Message', ['type', 'receiver', 'time', 'content', 'sem'])
 
+class Message(object):
+    possible_sems = ('sys_utterance', 'user_utterance', 'display_image',
+                     'add_provenance', 'display_sbgn')
 
-def _is_type(msg, head, content_head):
-    try:
-        return (msg.head().upper() == head.upper() and
-                msg.get('content').head().upper() == content_head.upper())
-    except Exception as e:
+    def __init__(self, type, partner, time, content):
+        self.type = type
+        self.partner = partner
+        self.time = time
+        self.content = content
+        self.sem = None
+        for sem in self.possible_sems:
+            if self.content_is(sem):
+                self.sem = sem
+                break
+        return
+
+    def _cont_is_type(self, head, content_head):
+        try:
+            return (self.content.head().upper() == head.upper() and
+                    self.content.get('content').head().upper() == content_head.upper())
+        except Exception as e:
+            return False
+
+    def content_is(self, msg_type):
+        simple_types = ['display_image', 'display_sbgn', 'add_provenance']
+        if msg_type in simple_types:
+            if msg_type != 'add_provenance':
+                msg_type = msg_type.replace('_', '-')
+            return self._cont_is_type('tell', msg_type)
+        elif msg_type == 'sys_utterance':
+            return (self.partner and self.partner.upper() == 'BA' and
+                    self._cont_is_type('tell', 'spoken'))
+        elif msg_type == 'user_utterance':
+            if not self.partner or self.partner.upper() != 'BA':
+                return False
+            sen = self.content.gets('sender')
+            if not sen:
+                return False
+            if sen.upper() == 'TEXTTAGGER' \
+                    and self._cont_is_type('tell', 'utterance'):
+                return True
+        logger.warning("Unrecognized message type: %s" % msg_type)
         return False
-
-
-def is_display_image(msg, receiver):
-    return _is_type(msg, 'tell', 'display-image')
-
-
-def is_display_sbgn(msg, receiver):
-    return _is_type(msg, 'tell', 'display-sbgn')
-
-
-def is_add_provenance(msg, receiver):
-    return _is_type(msg, 'tell', 'add_provenance')
-
-
-def is_sys_utterance(msg, receiver):
-    if receiver and receiver.upper() == 'BA' and _is_type(msg, 'tell', 'spoken'):
-        return True
-    return False
-
-
-def is_user_utterance(msg, receiver):
-    if not receiver or receiver.upper() != 'BA':
-        return False
-    sen = msg.gets('sender')
-    if not sen:
-        return False
-    if sen.upper() == 'TEXTTAGGER' and  _is_type(msg, 'tell', 'utterance'):
-        return True
-    return False
 
 
 def format_sys_utterance(msg):
@@ -128,20 +138,7 @@ class CwcLogEntry(object):
             self.content = KQMLPerformative.from_string(self.message)
 
         # Add message semantics
-        sem_map = {
-            is_sys_utterance: 'sys_utterance',
-            is_user_utterance: 'user_utterance',
-            is_display_image: 'display_image',
-            is_add_provenance: 'add_provenance',
-            is_display_sbgn: 'display_sbgn'
-        }
-        sem = None
-        for fun, sem_value in sem_map.items():
-            if fun(self.content, self.partner):
-                sem = sem_value
-                break
-        msg = Message(type=self.type, receiver=self.partner, time=self.time,
-                      content=self.content, sem=sem)
+        msg = Message(self.type, self.partner, self.time, self.content)
         return msg
 
 
