@@ -10,34 +10,6 @@ THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 Message = namedtuple('Message', ['type', 'receiver', 'time', 'content', 'sem'])
 
 
-def tag_to_message(tag):
-    msg_type = tag.name
-    if msg_type == 's':
-        receiver = tag.attrs['r']
-    time = tag.attrs['t']
-    content_str = ''.join([str(c) for c in tag.contents]).strip()
-    #content_str = tag.text.strip()
-    content = KQMLPerformative.from_string(content_str)
-
-    # Add message semantics
-    sem_map = {
-            is_sys_utterance: 'sys_utterance',
-            is_user_utterance: 'user_utterance',
-            is_display_image: 'display_image',
-            is_add_provenance: 'add_provenance',
-            is_display_sbgn: 'display_sbgn'
-            }
-    sem = None
-    for fun, sem_value in sem_map.items():
-        if fun(content, receiver):
-            sem = sem_value
-            break
-    msg = Message(type=msg_type, receiver=receiver, time=time, content=content,
-                  sem=sem)
-
-    return msg
-
-
 def _is_type(msg, head, content_head):
     try:
         return (msg.head().upper() == head.upper() and
@@ -59,8 +31,7 @@ def is_add_provenance(msg, receiver):
 
 
 def is_sys_utterance(msg, receiver):
-    if receiver and receiver.upper() == 'BA' and \
-        _is_type(msg, 'tell', 'spoken'):
+    if receiver and receiver.upper() == 'BA' and _is_type(msg, 'tell', 'spoken'):
         return True
     return False
 
@@ -118,24 +89,17 @@ def make_html(html_parts):
     return html
 
 
-def get_io_msgs(soup):
+def get_io_msgs(log):
     io_msgs = []
-    tags = soup.find_all('s')
-    for tag in tags:
+    entry_list = log.sent
+    for entry in entry_list:
         try:
-            msg = tag_to_message(tag)
+            msg = entry.to_message()
         except Exception:
             continue
         if msg.sem is not None:
             io_msgs.append(msg)
     return io_msgs
-
-
-def get_start_time(soup):
-    # <LOG TIME="9:04 PM" DATE="7/26/18" FILE="facilitator.log">
-    log = soup.find('log')
-    start_time = log.attrs['date'] + ' ' + log.attrs['time']
-    return start_time
 
 
 def format_start_time(start_time):
@@ -145,6 +109,40 @@ def format_start_time(start_time):
     </div>
     """.format(start_time=start_time)
     return textwrap.dedent(html)
+
+
+class CwcLogEntry(object):
+    """Parent class for entries in the logs."""
+
+    def __init__(self, type, time, message, partner):
+        self.type = type
+        self.time = time
+        self.message = message
+        self.partner = partner
+        self.content = None
+        return
+
+    def to_message(self):
+        """Convert the entry to a message."""
+        if not self.content:
+            self.content = KQMLPerformative.from_string(self.message)
+
+        # Add message semantics
+        sem_map = {
+            is_sys_utterance: 'sys_utterance',
+            is_user_utterance: 'user_utterance',
+            is_display_image: 'display_image',
+            is_add_provenance: 'add_provenance',
+            is_display_sbgn: 'display_sbgn'
+        }
+        sem = None
+        for fun, sem_value in sem_map.items():
+            if fun(self.content, self.partner):
+                sem = sem_value
+                break
+        msg = Message(type=self.type, receiver=self.partner, time=self.time,
+                      content=self.content, sem=sem)
+        return msg
 
 
 class CwcLog(object):
@@ -166,12 +164,10 @@ class CwcLog(object):
         self.received = []
         self.all = []
         for typ, dt, other_type, partner, msg in sec_list:
-            entry = {'type': typ, 'time': dt, 'msg': msg}
+            entry = CwcLogEntry(typ, dt, msg, partner)
             if typ == 'S':
-                entry['receiver'] = partner
                 self.sent.append(entry)
             else:
-                entry['sender'] = partner
                 self.received.append(entry)
             self.all.append(entry)
         return
@@ -185,11 +181,11 @@ def log_file_to_html_file(log_file, html_file=None):
 
     html_parts = ['<div class="container">']
 
-    start_time = get_start_time(soup)
+    start_time = log.start_time
     html_parts.append(format_start_time(start_time))
 
     # Find all messages received by the BA
-    io_msgs = get_io_msgs(soup)
+    io_msgs = get_io_msgs(log)
     for msg in io_msgs:
         if msg.sem == 'sys_utterance':
             print('SYS: %s' % msg.content)
