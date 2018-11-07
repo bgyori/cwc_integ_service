@@ -40,6 +40,21 @@ def get_session_logs(cont):
     return fname
 
 
+def get_bioagent_images(cont):
+    try:
+        bts, meta = cont.get_archive(
+            '/sw/cwc-integ/hms/bioagents/bioagents/images'
+            )
+    except Exception as e:
+        print("WARNING: Failed to get images from the bioagents.")
+        return None
+    arch_name = '%s_bioagent_images.tar.gz' % make_cont_name(cont)
+    with open(arch_name, 'wb') as f:
+        for bit in bts:
+            f.write(bit)
+    return arch_name
+
+
 def format_cont_date(cont):
     cont_date = ('-'.join(cont.attrs['Created'].replace(':', '-')
                  .replace('.', '-').split('-')[:-1]))
