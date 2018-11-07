@@ -47,7 +47,7 @@ def format_cont_date(cont):
 
 
 def make_cont_name(cont):
-    return '%s_%s_%s' % (cont.image.attrs['Config']['Image'],
+    return '%s_%s_%s' % (cont.image.attrs['Config']['Image'].replace(':', '-'),
                          cont.image.attrs['Config']['Hostname'], cont.name)
 
 
