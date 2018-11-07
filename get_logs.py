@@ -3,7 +3,6 @@ import boto3
 import docker
 import tarfile
 from io import BytesIO
-from datetime import datetime
 
 
 def c_ls(container, dirname):
@@ -57,7 +56,7 @@ def get_logs_for_container(cont):
     run_log_fname = get_run_logs(cont)
     for fname in [ses_log_fname, run_log_fname]:
         _dump_on_s3(fname)
-    return
+    return ses_log_fname, run_log_fname
 
 
 def _dump_on_s3(fname):
@@ -79,14 +78,12 @@ def get_logs():
     master_logs = []
     log_arches = []
     for cont in cont_list:
-        master_logs.append(get_session_logs(cont))
-        log_arches.append(get_run_logs(cont))
+        ses_name, run_name = get_logs_for_container(cont)
+        master_logs.append(ses_name)
+        log_arches.append(run_name)
     print("Found the following logs:")
     print(master_logs)
     print(log_arches)
-    now = datetime.now()
-    for fname in log_arches + master_logs:
-        _dump_on_s3(fname)
     return
 
 
