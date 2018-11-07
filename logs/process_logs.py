@@ -53,6 +53,7 @@ class Message(object):
             if sen.upper() == 'TEXTTAGGER' \
                     and self._cont_is_type('tell', 'utterance'):
                 return True
+            return False
         logger.warning("Unrecognized message type: %s" % msg_type)
         return False
 
@@ -156,7 +157,7 @@ class CwcLogEntry(object):
 
 class CwcLog(object):
     """Object to organize the logs retrieved from cwc facilitator.log."""
-    section_patt = re.compile('<(?P<type>S|R)\s+T=\"(?P<time>.*?)\"\s+'
+    section_patt = re.compile('<(?P<type>S|R)\s+T=\"(?P<time>[\d.:]+)\"\s+'
                               '(?P<other_type>S|R)=\"(?P<sender>\w+)\">'
                               '\s+(?P<msg>.*?)\s+</(?P=type)>', re.DOTALL)
     time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
