@@ -141,6 +141,18 @@ class CwcLogEntry(object):
         msg = Message(self.type, self.partner, self.time, self.content)
         return msg
 
+    def __repr__(self):
+        ret = '<%s ' % self.__class__.__name__
+        ret += self.type + ' to ' if self.type == 'S' else ' from '
+        nmax = 50
+        if len(self.message) <= nmax:
+            msg_str = self.message
+        else:
+            msg_str = self.message[:(nmax-3)] + '...'
+        ret += self.partner + ": \"%s\"" % msg_str
+        ret += '>'
+        return ret
+
 
 class CwcLog(object):
     """Object to organize the logs retrieved from cwc facilitator.log."""
