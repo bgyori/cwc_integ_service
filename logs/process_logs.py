@@ -38,9 +38,9 @@ class Message(object):
     def content_is(self, msg_type):
         simple_types = ['display_image', 'display_sbgn', 'add_provenance']
         if msg_type in simple_types:
-            if msg_type != 'add_provenance':
-                msg_type = msg_type.replace('_', '-')
-            return self._cont_is_type('tell', msg_type)
+            msg_type = msg_type.replace('_', '-')
+            ret = self._cont_is_type('tell', msg_type)
+            return ret
         elif msg_type == 'sys_utterance':
             return (self.partner and self.partner.upper() == 'BA' and
                     self._cont_is_type('tell', 'spoken'))
@@ -92,6 +92,22 @@ def format_user_utterance(msg):
     return textwrap.dedent(html)
 
 
+def format_provenance(msg):
+    prov_html = msg.content.get('content').gets('html')
+    html = """
+    <div class="row add_provenance" style="margin-top: 15px">
+        <div class="col-sm sys_name">
+            <span style="background-color: #2E64FE; color: 
+            #FFFFFF">Bob (provenance):</span>&nbsp;<a style="color:
+            #BDBDBD">{time}</a>
+        </div>
+    </div>
+
+    {provenance_html}
+    """.format(time=msg.time, provenance_html=prov_html)
+    return textwrap.dedent(html)
+
+
 def make_html(html_parts):
     with open(os.path.join(THIS_DIR, 'page_template.html'), 'r') as fh:
         template = fh.read()
@@ -102,7 +118,7 @@ def make_html(html_parts):
 
 def get_io_msgs(log):
     io_msgs = []
-    entry_list = log.sent
+    entry_list = log.all
     for entry in entry_list:
         try:
             msg = entry.to_message()
@@ -144,7 +160,8 @@ class CwcLogEntry(object):
 
     def __repr__(self):
         ret = '<%s ' % self.__class__.__name__
-        ret += self.type + ' to ' if self.type == 'S' else ' from '
+        ret += self.type
+        ret += ' to ' if self.type == 'S' else ' from '
         nmax = 50
         if len(self.message) <= nmax:
             msg_str = self.message
@@ -203,6 +220,9 @@ def log_file_to_html_file(log_file, html_file=None):
         elif msg.sem == 'user_utterance':
             print('USER: %s' % msg.content)
             html_parts.append(format_user_utterance(msg))
+        elif msg.sem == 'add_provenance':
+            print('SYS: <sent content to provenance>')
+            html_parts.append(format_provenance(msg))
     html_parts.append('</div>')
 
     with open(html_file, 'w') as fh:
