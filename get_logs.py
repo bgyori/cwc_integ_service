@@ -67,11 +67,13 @@ def make_cont_name(cont):
 
 
 def get_logs_for_container(cont):
-    ses_log_fname = get_session_logs(cont)
-    run_log_fname = get_run_logs(cont)
-    for fname in [ses_log_fname, run_log_fname]:
+    tasks = [get_session_logs, get_run_logs, get_bioagent_images]
+    fnames = []
+    for task in tasks:
+        fname = task(cont)
+        fnames.append(fname)
         _dump_on_s3(fname)
-    return ses_log_fname, run_log_fname
+    return tuple(fnames)
 
 
 def _dump_on_s3(fname):
@@ -92,13 +94,16 @@ def get_logs():
     cont_list = client.containers.list(True)
     master_logs = []
     log_arches = []
+    img_arches = []
     for cont in cont_list:
-        ses_name, run_name = get_logs_for_container(cont)
+        ses_name, run_name, img_name = get_logs_for_container(cont)
         master_logs.append(ses_name)
         log_arches.append(run_name)
+        img_arches.append(img_name)
     print("Found the following logs:")
     print(master_logs)
     print(log_arches)
+    print(img_arches)
     return
 
 
