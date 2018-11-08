@@ -4,6 +4,8 @@ import docker
 import tarfile
 from io import BytesIO
 
+import logging
+logger = logging.getLogger('log-getter')
 
 def c_ls(container, dirname):
     started = False
@@ -46,7 +48,7 @@ def get_bioagent_images(cont):
             '/sw/cwc-integ/hms/bioagents/bioagents/images'
             )
     except Exception as e:
-        print("WARNING: Failed to get images from the bioagents.")
+        logger.warning("Failed to get images from the bioagents.")
         return None
     arch_name = '%s_bioagent_images.tar.gz' % make_cont_name(cont)
     with open(arch_name, 'wb') as f:
@@ -71,6 +73,7 @@ def get_logs_for_container(cont):
     fnames = []
     for task in tasks:
         fname = task(cont)
+        logger.info("Saved %s locally." % fname)
         fnames.append(fname)
         _dump_on_s3(fname)
     return tuple(fnames)
@@ -85,6 +88,7 @@ def _dump_on_s3(fname):
     with open(fname, 'rb') as f:
         s3.put_object(Key=s3_prefix + fname, Body=f.read(),
                       Bucket=s3_bucket)
+    logger.info("%s dumped on s3." % fname)
     return
 
 
