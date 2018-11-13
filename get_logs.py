@@ -5,6 +5,7 @@ import boto3
 import docker
 import tarfile
 from io import BytesIO
+from indra.util.aws import get_s3_file_tree
 
 import logging
 logger = logging.getLogger('log-getter')
@@ -121,13 +122,15 @@ def get_logs_from_s3(folder=None, cached=True):
     # most 1000 items. I wrote something to handle this here:
     # https://github.com/indralab/indra_db/blob/a32132a2a8ecb10fea07666abafbffb50dd77679/indra_db/reading/submit_reading_pipeline.py#L193-L204
     s3 = boto3.client('s3')
-    contents = s3.list_objects(Bucket='cwc-hms',
-                               Prefix='bob_ec2_logs')['Contents']
+    tree = get_s3_file_tree(s3, 'cwc-hms', 'bob_ec2_logs')
+    keys = tree.gets('key')
     # Here we only get the tar.gz files which contain the logs for the
     # facilitator
-    keys = [content['Key'] for content in contents if
-            content['Key'].startswith('bob_ec2_logs/cwc-integ') and
-            content['Key'].endswith('.tar.gz')]
+    print(len(keys))
+    print(len([k for k in keys if 'image' in k]))
+    keys = [key for key in keys if key.startswith('bob_ec2_logs/cwc-integ')
+            and key.endswith('.tar.gz')]
+    print(len(keys))
     print('Found %d keys' % len(keys))
 
     fname_patt = re.compile('([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).tar.gz')
@@ -146,15 +149,14 @@ def get_logs_from_s3(folder=None, cached=True):
             outpath = head_dir_path
         else:
             outpath = os.path.join(head_dir_path, 'log.txt')
-        if cached and os.path.exists(outpath):
-            print('File/directory already exists: %s' % outpath)
-            continue
+            if cached and os.path.exists(outpath):
+                continue
 
         res = s3.get_object(Bucket='cwc-hms', Key=key)
         byte_stream = BytesIO(res['Body'].read())
         with tarfile.open(None, 'r', fileobj=byte_stream) as tarf:
-            if 'image' in outpath:
-                tarf.extractfile(outpath)
+            if resource_name == 'bioagent_images':
+                tarf.extractall(outpath)
             else:
                 outpaths = tarf.getnames()
                 facls = [n for n in outpaths if n.endswith('facilitator.log')]
@@ -165,7 +167,6 @@ def get_logs_from_s3(folder=None, cached=True):
                 efo = tarf.extractfile(facl)
                 log_txt = efo.read().decode('utf-8')
                 with open(outpath, 'w') as fh:
-                    print('Writing file %s' % outpath)
                     fh.write(log_txt)
 
 
