@@ -1,4 +1,6 @@
 import os
+import re
+
 import boto3
 import docker
 import tarfile
@@ -114,9 +116,13 @@ def get_logs():
 def get_logs_from_s3(folder=None, cached=True):
     """Download logs from S3 and save into a local folder"""
     import tqdm
+
+    # TODO: We are going to have to page through s3 logs. We can only get at
+    # most 1000 items. I wrote something to handle this here:
+    # https://github.com/indralab/indra_db/blob/a32132a2a8ecb10fea07666abafbffb50dd77679/indra_db/reading/submit_reading_pipeline.py#L193-L204
     s3 = boto3.client('s3')
-    contents = res = s3.list_objects(Bucket='cwc-hms',
-                                     Prefix='bob_ec2_logs')['Contents']
+    contents = s3.list_objects(Bucket='cwc-hms',
+                               Prefix='bob_ec2_logs')['Contents']
     # Here we only get the tar.gz files which contain the logs for the
     # facilitator
     keys = [content['Key'] for content in contents if
@@ -124,32 +130,43 @@ def get_logs_from_s3(folder=None, cached=True):
             content['Key'].endswith('.tar.gz')]
     print('Found %d keys' % len(keys))
 
+    fname_patt = re.compile('([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).tar.gz')
     for key in tqdm.tqdm(keys):
-        # Replace a couple of things in the key to make the actual fname
-        fname = key.replace('/', '_')
-        fname = fname.replace('bob_ec2_logs_cwc-integ:latest_', '')
-        fname = fname.replace('bob_ec2_logs_cwc-integ_', '')
-        fname = fname.replace('.tar.gz', '.txt')
+        fname = os.path.basename(key)
+        m = fname_patt.match(fname)
+        assert m is not None, "Failed to match %s" % fname_patt
+        image, cont_hash, cont_name, resource_name = m.groups()
+        head_dir_path = '%s_%s_%s' % (image.replace(':', '-'), cont_name,
+                                      cont_hash)
         if folder:
-            fname = os.path.join(folder, fname)
-        if cached and os.path.exists(fname):
-            print('File already exists: %s' % fname)
+            head_dir_path = os.path.join(folder, head_dir_path)
+        if not os.path.exists(head_dir_path):
+            os.mkdir(head_dir_path)
+        if resource_name == 'bioagent_images':
+            outpath = head_dir_path
+        else:
+            outpath = os.path.join(head_dir_path, 'log.txt')
+        if cached and os.path.exists(outpath):
+            print('File/directory already exists: %s' % outpath)
             continue
 
         res = s3.get_object(Bucket='cwc-hms', Key=key)
         byte_stream = BytesIO(res['Body'].read())
         with tarfile.open(None, 'r', fileobj=byte_stream) as tarf:
-            fnames = tarf.getnames()
-            facls = [n for n in fnames if n.endswith('facilitator.log')]
-            if not facls:
-                print('No facilitator.log found for %s' % key)
-                continue
-            facl = facls[0]
-            efo = tarf.extractfile(facl)
-            log_txt = efo.read().decode('utf-8')
-            with open(fname, 'w') as fh:
-                print('Writing file %s' % fname)
-                fh.write(log_txt)
+            if 'image' in outpath:
+                tarf.extractfile(outpath)
+            else:
+                outpaths = tarf.getnames()
+                facls = [n for n in outpaths if n.endswith('facilitator.log')]
+                if not facls:
+                    print('No facilitator.log found for %s' % key)
+                    continue
+                facl = facls[0]
+                efo = tarf.extractfile(facl)
+                log_txt = efo.read().decode('utf-8')
+                with open(outpath, 'w') as fh:
+                    print('Writing file %s' % outpath)
+                    fh.write(log_txt)
 
 
 if __name__ == '__main__':
