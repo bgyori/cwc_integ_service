@@ -270,6 +270,26 @@ class CwcLog(object):
 
 
 def export_logs(log_dir_path, out_file=None, file_type='html'):
+    """Export the logs in log_dir_path into html or pdf.
+
+    Parameters
+    ----------
+    log_dir_path : str
+        The path to the log directory which should contain log.txt and a
+        directory called 'images'.
+    out_file : str
+        By default this will be a file 'transcript.html' or 'transcript.pdf' in
+        the log_dir_path, depending on the file_type. If an out_file is
+        specified, the file_type is over-ruled by the file ending.
+    file_type : 'html' or 'pdf'
+        Specify the output file time. If an out_file is specified, the type
+        implied by the file will override this parameter. Default is 'html'.
+
+    Returns
+    -------
+    out_file : str
+        The path to the output file.
+    """
     file_type = file_type.lower()
     if out_file and out_file.endswith('.pdf'):
         file_type = 'pdf'
@@ -293,6 +313,7 @@ def export_logs(log_dir_path, out_file=None, file_type='html'):
             return
         pdfkit.from_string(html, out_file)
     logger.info("Result saved to %s." % out_file)
+    return out_file
 
 
 if __name__ == '__main__':
