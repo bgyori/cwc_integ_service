@@ -299,9 +299,9 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     if file_type not in ['pdf', 'html']:
         raise ValueError("Invalid file type: %s." % file_type)
 
-    html_file = os.path.join(log_dir_path, 'transcript.' + file_type)
+    html_file = os.path.join(log_dir_path, 'transcript.html')
     if out_file is None:
-        out_file = html_file
+        out_file = html_file.replace('html', file_type)
 
     if not use_cache or not os.path.exists(html_file):
         log = CwcLog(log_dir_path)
