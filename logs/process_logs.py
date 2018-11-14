@@ -130,7 +130,7 @@ def get_io_msgs(log):
 
 
 def format_start_time(start_time):
-    html= """
+    html = """
     <div class="row start_time">
       <div class="col-sm">Dialogue started at: {start_time}</div>
     </div>
@@ -179,8 +179,10 @@ class CwcLog(object):
                               '\s+(?P<msg>.*?)\s+</(?P=type)>', re.DOTALL)
     time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
 
-    def __init__(self, log_file):
-        with open(log_file, 'r') as f:
+    def __init__(self, log_dir):
+        self.log_dir = log_dir
+        self.log_file = os.path.join(log_dir, 'log.txt')
+        with open(self.log_file, 'r') as f:
             self.__log = f.read()
         tp = self.time_patt.search(self.__log)
         assert tp is not None, "Failed to get time string."
@@ -200,11 +202,11 @@ class CwcLog(object):
         return
 
 
-def log_file_to_html_file(log_file, html_file=None):
+def logs_to_html_file(log_dir_path, html_file=None):
     if html_file is None:
-        html_file = log_file[:-4] + '.html'
+        html_file = os.path.join(log_dir_path, 'transcript.html')
 
-    log = CwcLog(log_file)
+    log = CwcLog(log_dir_path)
 
     html_parts = ['<div class="container">']
 
@@ -230,5 +232,4 @@ def log_file_to_html_file(log_file, html_file=None):
 
 
 if __name__ == '__main__':
-    log_file = sys.argv[1]
-    log_file_to_html_file(log_file)
+    logs_to_html_file(sys.argv[1])
