@@ -12,55 +12,6 @@ from kqml import *
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
-def format_sys_utterance(entry):
-    msg_text = entry.content.get('content').gets('what')
-    html = """
-    <div class="row sys_utterance" style="margin-top: 15px">
-      <div class="col-sm sys_name">
-        <span style="background-color:#2E64FE; color: 
-        #FFFFFF">Bob:</span>&nbsp;<a style="color: #BDBDBD">{time}</a>
-      </div>
-    </div>
-
-    <div class="row sys_utterance" style="margin-bottom: 15px">
-      <div class="col-sm sys_msg">{txt}</div>
-    </div>
-    """.format(time=entry.time, txt=msg_text)
-    return textwrap.dedent(html)
-
-
-def format_user_utterance(entry):
-    msg_text = entry.content.get('content').gets('text')
-    html = """
-    <div class="row usr_utterance" style="margin-top: 15px">
-      <div class="col-sm usr_name">
-        <span style="background-color: #A5DF00; color: 
-        #FFFFFF">User:</span>&nbsp;<a style="color: #BDBDBD">{time}</a>
-      </div>
-    </div>
-
-    <div class="row usr_utterance" style="margin-bottom: 15px">
-      <div class="col-sm usr_msg">{txt}</div>
-    </div>
-    """.format(time=entry.time, txt=msg_text)
-    return textwrap.dedent(html)
-
-
-def format_provenance(entry):
-    prov_html = entry.content.get('content').gets('html')
-    html = """
-    <div class="row add_provenance" style="margin-top: 15px">
-        <div class="col-sm sys_name">
-            <span style="background-color: #2E64FE; color: 
-            #FFFFFF">Bob (provenance):</span>&nbsp;<a style="color:
-            #BDBDBD">{time}</a>
-        </div>
-    </div>
-
-    {provenance_html}
-    """.format(time=entry.time, provenance_html=prov_html)
-    return textwrap.dedent(html)
-
 
 def make_html(html_parts):
     with open(os.path.join(THIS_DIR, 'page_template.html'), 'r') as fh:
@@ -113,6 +64,55 @@ class CwcLogEntry(object):
         if sem not in self.possible_sems:
             raise ValueError("Invalid sem: %s" % sem)
         return self.get_sem() == sem
+
+    def make_html(self):
+        if self.is_sem('sys_utterance'):
+            print('SYS:', str(self.content))
+            inp = self.content.get('content').gets('what')
+            fmt = """
+            <div class="row sys_utterance" style="margin-top: 15px">
+              <div class="col-sm sys_name">
+                <span style="background-color:#2E64FE; color: 
+                #FFFFFF">Bob:</span>&nbsp;<a style="color: #BDBDBD">{time}</a>
+              </div>
+            </div>
+
+            <div class="row sys_utterance" style="margin-bottom: 15px">
+              <div class="col-sm sys_msg">{inp}</div>
+            </div>
+            """
+        elif self.is_sem('user_utterance'):
+            print('USR:', str(self.content))
+            inp = self.content.get('content').gets('text')
+            fmt = """
+            <div class="row usr_utterance" style="margin-top: 15px">
+              <div class="col-sm usr_name">
+                <span style="background-color: #A5DF00; color: 
+                #FFFFFF">User:</span>&nbsp;<a style="color: #BDBDBD">{time}</a>
+              </div>
+            </div>
+
+            <div class="row usr_utterance" style="margin-bottom: 15px">
+              <div class="col-sm usr_msg">{inp}</div>
+            </div>
+            """
+        elif self.is_sem('add_provenance'):
+            print("SYS sent provenance.")
+            inp = self.content.get('content').gets('html')
+            fmt = """
+            <div class="row add_provenance" style="margin-top: 15px">
+                <div class="col-sm sys_name">
+                    <span style="background-color: #2E64FE; color: 
+                    #FFFFFF">Bob (provenance):</span>&nbsp;<a style="color:
+                    #BDBDBD">{time}</a>
+                </div>
+            </div>
+
+            {inp}
+            """
+        else:
+            return None
+        return textwrap.dedent(fmt.format(time=self.time, inp=inp))
 
     def _cont_is_type(self, head, content_head):
         try:
@@ -235,15 +235,9 @@ def logs_to_html_file(log_dir_path, html_file=None):
 
     # Find all messages received by the BA
     for entry in log.get_io_entries():
-        if entry.is_sem('sys_utterance'):
-            print('SYS: %s' % entry.get_content())
-            html_parts.append(format_sys_utterance(entry))
-        elif entry.is_sem('user_utterance'):
-            print('USER: %s' % entry.get_content())
-            html_parts.append(format_user_utterance(entry))
-        elif entry.is_sem('add_provenance'):
-            print('SYS: <sent content to provenance>')
-            html_parts.append(format_provenance(entry))
+        html_part = entry.make_html()
+        if html_part is not None:
+            html_parts.append(html_part)
     html_parts.append('</div>')
 
     with open(html_file, 'w') as fh:
