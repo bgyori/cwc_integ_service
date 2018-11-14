@@ -269,7 +269,7 @@ class CwcLog(object):
         return make_html(html_parts)
 
 
-def export_logs(log_dir_path, out_file=None, file_type='html'):
+def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     """Export the logs in log_dir_path into html or pdf.
 
     Parameters
@@ -284,6 +284,9 @@ def export_logs(log_dir_path, out_file=None, file_type='html'):
     file_type : 'html' or 'pdf'
         Specify the output file time. If an out_file is specified, the type
         implied by the file will override this parameter. Default is 'html'.
+    use_cache : bool
+        Default is True. If True, re-use previous results as stashed in the
+        log directory structure.
 
     Returns
     -------
@@ -296,16 +299,21 @@ def export_logs(log_dir_path, out_file=None, file_type='html'):
     if file_type not in ['pdf', 'html']:
         raise ValueError("Invalid file type: %s." % file_type)
 
+    html_file = os.path.join(log_dir_path, 'transcript.' + file_type)
     if out_file is None:
-        out_file = os.path.join(log_dir_path, 'transcript.' + file_type)
+        out_file = html_file
 
-    log = CwcLog(log_dir_path)
-    html = log.make_html()
+    if not use_cache or not os.path.exists(html_file):
+        log = CwcLog(log_dir_path)
+        html = log.make_html()
 
-    if file_type == 'html':
-        with open(out_file, 'w') as fh:
+        with open(html_file, 'w') as fh:
             fh.write(html)
-    elif file_type == 'pdf':
+    else:
+        with open(html_file, 'r') as fh:
+            html = fh.read()
+
+    if file_type == 'pdf':
         try:
             import pdfkit
         except ImportError:
