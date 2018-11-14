@@ -20,17 +20,17 @@ def make_html(html_parts):
     return html
 
 
-
 class CwcLogEntry(object):
     """Parent class for entries in the logs."""
     possible_sems = ('sys_utterance', 'user_utterance', 'display_image',
                      'add_provenance', 'display_sbgn')
 
-    def __init__(self, type, time, message, partner):
+    def __init__(self, type, time, message, partner, log_dir):
         self.type = type
         self.time = time
         self.message = message
         self.partner = partner
+        self.log_dir = log_dir
         self.content = None
         self.sem = None
         return
@@ -75,14 +75,14 @@ class CwcLogEntry(object):
         usr_back = '#A5DF00'
         fore_clr = '#FFFFFF'
         if self.is_sem('sys_utterance'):
-            print('SYS:', str(self.content))
+            print('SYS:', str(self.content)[:100])
             inp = cont.gets('what')
             name = 'Bob'
             back_clr = bob_back
             col_sm = 'sys_name'
             msg_sm = 'sys_msg'
         elif self.is_sem('user_utterance'):
-            print('USR:', str(self.content))
+            print('USR:', str(self.content)[:100])
             inp = cont.gets('text')
             name = 'User'
             back_clr = usr_back
@@ -105,6 +105,7 @@ class CwcLogEntry(object):
             else:
                 img_path_seg = img_path[img_path.index(IMG_DIRNAME):]
                 img_loc = os.path.sep.join(img_path_seg)
+                img_loc = os.path.abspath(os.path.join(self.log_dir, img_loc))
             inp = ('<img src=\"{img}\" alt=\"Image {img} Not Available\">'
                    .format(img=img_loc))
             name = 'Bob'
@@ -217,7 +218,7 @@ class CwcLog(object):
             sec_list = self.section_patt.findall(self.__log)
             assert sec_list, "Failed to find any sections."
             for typ, dt, other_type, partner, msg in sec_list:
-                entry = CwcLogEntry(typ, dt, msg, partner)
+                entry = CwcLogEntry(typ, dt, msg, partner, self.log_dir)
                 self.all_entries.append(entry)
             logger.info("Found %d log entries." % len(self.all_entries))
         return self.all_entries
@@ -263,16 +264,31 @@ class CwcLog(object):
         return make_html(html_parts)
 
 
-def logs_to_html_file(log_dir_path, html_file=None):
-    if html_file is None:
-        html_file = os.path.join(log_dir_path, 'transcript.html')
+def export_logs(log_dir_path, out_file=None, file_type='html'):
+    file_type = file_type.lower()
+    if out_file and out_file.endswith('.pdf'):
+        file_type = 'pdf'
+    if file_type not in ['pdf', 'html']:
+        raise ValueError("Invalid file type: %s." % file_type)
+
+    if out_file is None:
+        out_file = os.path.join(log_dir_path, 'transcript.' + file_type)
 
     log = CwcLog(log_dir_path)
+    html = log.make_html()
 
-    with open(html_file, 'w') as fh:
-        fh.write(log.make_html())
-    logger.info("Result saved to %s." % html_file)
+    if file_type == 'html':
+        with open(out_file, 'w') as fh:
+            fh.write(html)
+    elif file_type == 'pdf':
+        try:
+            import pdfkit
+        except ImportError:
+            logger.error("Could not import necessary module: pdfkit.")
+            return
+        pdfkit.from_string(html, out_file)
+    logger.info("Result saved to %s." % out_file)
 
 
 if __name__ == '__main__':
-    logs_to_html_file(sys.argv[1])
+    export_logs(sys.argv[1])
