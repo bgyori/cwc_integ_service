@@ -3,14 +3,13 @@ import re
 import sys
 import textwrap
 
-import logging
-
-logger = logging.getLogger('log_processor')
-
 from kqml import *
 
-THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+import logging
+logger = logging.getLogger('log_processor')
 
+THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+IMG_DIRNAME = 'images'
 
 
 def make_html(html_parts):
@@ -66,53 +65,66 @@ class CwcLogEntry(object):
         return self.get_sem() == sem
 
     def make_html(self):
+        cont = self.content.get('content')
+        fmt = """
+        <div class="row {sem}" style="margin-top: 15px">
+            <div class="col-sm {col_sm}">
+                <span style="background-color:{back_clr}; color:{fore_clr}">
+                    {name}:
+                </span>&nbsp;<a style="color: #BDBDBD">{time}</a>
+            </div>
+        </div>
+
+        <div class="row {sem}" style="margin-bottom: 15px">
+          <div class="col-sm {msg_sm}">{inp}</div>
+        </div>
+        """
+        bob_back = '#2E64FE'
+        usr_back = '#A5DF00'
+        fore_clr = '#FFFFFF'
         if self.is_sem('sys_utterance'):
             print('SYS:', str(self.content))
-            inp = self.content.get('content').gets('what')
-            fmt = """
-            <div class="row sys_utterance" style="margin-top: 15px">
-              <div class="col-sm sys_name">
-                <span style="background-color:#2E64FE; color: 
-                #FFFFFF">Bob:</span>&nbsp;<a style="color: #BDBDBD">{time}</a>
-              </div>
-            </div>
-
-            <div class="row sys_utterance" style="margin-bottom: 15px">
-              <div class="col-sm sys_msg">{inp}</div>
-            </div>
-            """
+            inp = cont.gets('what')
+            name = 'Bob'
+            back_clr = bob_back
+            col_sm = 'sys_name'
+            msg_sm = 'sys_msg'
         elif self.is_sem('user_utterance'):
             print('USR:', str(self.content))
-            inp = self.content.get('content').gets('text')
-            fmt = """
-            <div class="row usr_utterance" style="margin-top: 15px">
-              <div class="col-sm usr_name">
-                <span style="background-color: #A5DF00; color: 
-                #FFFFFF">User:</span>&nbsp;<a style="color: #BDBDBD">{time}</a>
-              </div>
-            </div>
-
-            <div class="row usr_utterance" style="margin-bottom: 15px">
-              <div class="col-sm usr_msg">{inp}</div>
-            </div>
-            """
+            inp = cont.gets('text')
+            name = 'User'
+            back_clr = usr_back
+            col_sm = 'usr_name'
+            msg_sm = 'usr_msg'
         elif self.is_sem('add_provenance'):
             print("SYS sent provenance.")
-            inp = self.content.get('content').gets('html')
-            fmt = """
-            <div class="row add_provenance" style="margin-top: 15px">
-                <div class="col-sm sys_name">
-                    <span style="background-color: #2E64FE; color: 
-                    #FFFFFF">Bob (provenance):</span>&nbsp;<a style="color:
-                    #BDBDBD">{time}</a>
-                </div>
-            </div>
-
-            {inp}
-            """
+            inp = cont.gets('html')
+            name = 'Bob (provenance)'
+            back_clr = bob_back
+            col_sm = 'sys_name'
+            msg_sm = 'prov_html'
+        elif self.is_sem('display_image'):
+            print("SYS sent image: %s" % cont.gets('path'))
+            img_path = cont.gets('path').split(os.path.sep)
+            if IMG_DIRNAME not in img_path:
+                logger.warning("Image not shown: its path lacks correct "
+                               "structure: %s" % img_path)
+                img_loc = ""
+            else:
+                img_path_seg = img_path[img_path.index(IMG_DIRNAME):]
+                img_loc = os.path.sep.join(img_path_seg)
+            inp = ('<img src=\"{img}\" alt=\"Image {img} Not Available\">'
+                   .format(img=img_loc))
+            name = 'Bob'
+            back_clr = bob_back
+            col_sm = 'sys_name'
+            msg_sm = 'sys_image'
         else:
             return None
-        return textwrap.dedent(fmt.format(time=self.time, inp=inp))
+        return textwrap.dedent(fmt.format(time=self.time, inp=inp, name=name,
+                                          col_sm=col_sm, msg_sm=msg_sm,
+                                          back_clr=back_clr, fore_clr=fore_clr,
+                                          sem=self.get_sem()))
 
     def _cont_is_type(self, head, content_head):
         try:
@@ -177,7 +189,7 @@ class CwcLog(object):
         self.all_entries = None
 
         # Get familiar with the image stash, if present.
-        self.img_dir = os.path.join(log_dir, 'images')
+        self.img_dir = os.path.join(log_dir, IMG_DIRNAME)
         if not os.path.exists(self.img_dir):
             # If the logs are old and there's no image directory, we'll just
             # have to live without images.
@@ -191,6 +203,7 @@ class CwcLog(object):
 
     def get_start_time(self):
         if self.start_time is None:
+            logger.info("Loading start time...")
             tp = self.time_patt.search(self.__log)
             assert tp is not None, "Failed to get time string."
             self.start_time = ' '.join(tp.groups())
@@ -198,18 +211,21 @@ class CwcLog(object):
 
     def get_all_entries(self):
         if self.all_entries is None:
+            logger.info("Loading log entries...")
             self.all_entries = []
             sec_list = self.section_patt.findall(self.__log)
             assert sec_list, "Failed to find any sections."
             for typ, dt, other_type, partner, msg in sec_list:
                 entry = CwcLogEntry(typ, dt, msg, partner)
                 self.all_entries.append(entry)
+            logger.info("Found %d log entries." % len(self.all_entries))
         return self.all_entries
 
     def get_io_entries(self):
         if not self.io_entries:
             self.io_entries = []
             entry_list = self.get_all_entries()
+            logger.info("Filtering to io entries...")
             for entry in entry_list:
                 try:
                     entry.get_content()
@@ -219,6 +235,7 @@ class CwcLog(object):
                     continue
                 if entry.get_sem() is not None:
                     self.io_entries.append(entry)
+            logger.info("Found %d io entries." % len(self.io_entries))
         return self.io_entries
 
 
@@ -242,6 +259,7 @@ def logs_to_html_file(log_dir_path, html_file=None):
 
     with open(html_file, 'w') as fh:
         fh.write(make_html(html_parts))
+    logger.info("Result saved to %s." % html_file)
 
 
 if __name__ == '__main__':
