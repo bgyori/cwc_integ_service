@@ -63,7 +63,9 @@ class CwcLogEntry(object):
             <div class="col-sm {col_sm}">
                 <span style="background-color:{back_clr}; color:{fore_clr}">
                     {name}:
-                </span>&nbsp;<a style="color: #BDBDBD">{time}</a>
+                </span>&nbsp;<a style="color: #BDBDBD">
+                    at {time} from the {ag}
+                    </a>
             </div>
         </div>
 
@@ -108,7 +110,10 @@ class CwcLogEntry(object):
                 img_loc = os.path.abspath(os.path.join(self.log_dir, img_loc))
             inp = ('<img src=\"{img}\" alt=\"Image {img} Not Available\">'
                    .format(img=img_loc))
-            name = 'Bob (%s)' % cont.gets('type')
+            img_type = cont.gets('type')
+            if img_type == 'simulation' and self.partner == 'QCA':
+                img_type = 'path_diagram'
+            name = 'Bob (%s)' % img_type
             back_clr = bob_back
             col_sm = 'sys_name'
             msg_sm = 'sys_image'
@@ -117,7 +122,7 @@ class CwcLogEntry(object):
         return textwrap.dedent(fmt.format(time=self.time, inp=inp, name=name,
                                           col_sm=col_sm, msg_sm=msg_sm,
                                           back_clr=back_clr, fore_clr=fore_clr,
-                                          sem=self.get_sem()))
+                                          sem=self.get_sem(), ag=self.partner))
 
     def _cont_is_type(self, head, content_head):
         try:
