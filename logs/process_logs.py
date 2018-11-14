@@ -75,14 +75,14 @@ class CwcLogEntry(object):
         usr_back = '#A5DF00'
         fore_clr = '#FFFFFF'
         if self.is_sem('sys_utterance'):
-            print('SYS:', str(self.content)[:100])
+            print('SYS:', str(self.content)[:500])
             inp = cont.gets('what')
             name = 'Bob'
             back_clr = bob_back
             col_sm = 'sys_name'
             msg_sm = 'sys_msg'
         elif self.is_sem('user_utterance'):
-            print('USR:', str(self.content)[:100])
+            print('USR:', str(self.content)[:500])
             inp = cont.gets('text')
             name = 'User'
             back_clr = usr_back
@@ -108,7 +108,7 @@ class CwcLogEntry(object):
                 img_loc = os.path.abspath(os.path.join(self.log_dir, img_loc))
             inp = ('<img src=\"{img}\" alt=\"Image {img} Not Available\">'
                    .format(img=img_loc))
-            name = 'Bob'
+            name = 'Bob (%s)' % cont.gets('type')
             back_clr = bob_back
             col_sm = 'sys_name'
             msg_sm = 'sys_image'
