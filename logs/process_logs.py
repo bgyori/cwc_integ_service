@@ -20,14 +20,6 @@ def make_html(html_parts):
     return html
 
 
-def format_start_time(start_time):
-    html = """
-    <div class="row start_time">
-      <div class="col-sm">Dialogue started at: {start_time}</div>
-    </div>
-    """.format(start_time=start_time)
-    return textwrap.dedent(html)
-
 
 class CwcLogEntry(object):
     """Parent class for entries in the logs."""
@@ -177,6 +169,7 @@ class CwcLog(object):
                               '(?P<other_type>S|R)=\"(?P<sender>\w+)\">'
                               '\s+(?P<msg>.*?)\s+</(?P=type)>', re.DOTALL)
     time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
+    container_name_patt = re.compile('([\w-]+)_(\w+?_\w+?)_(\w+)')
 
     def __init__(self, log_dir):
         self.log_dir = log_dir
@@ -186,6 +179,7 @@ class CwcLog(object):
         with open(self.log_file, 'r') as f:
             self.__log = f.read()
         self.start_time = None
+        self.container_name = None
         self.all_entries = None
 
         # Get familiar with the image stash, if present.
@@ -200,6 +194,13 @@ class CwcLog(object):
         # This is filled later.
         self.io_entries = None
         return
+
+    def get_container_name(self):
+        if self.container_name is None:
+            m = self.container_name_patt.match(os.path.basename(self.log_dir))
+            assert m is not None, "Failed to get container name."
+            self.container_name = m.groups()[1]
+        return self.container_name
 
     def get_start_time(self):
         if self.start_time is None:
@@ -238,6 +239,29 @@ class CwcLog(object):
             logger.info("Found %d io entries." % len(self.io_entries))
         return self.io_entries
 
+    def make_header(self):
+        html = """
+        <div class="row start_time">
+          <div class="col-sm">
+            Dialogue with {container} started at: {start_time}
+          </div>
+        </div>
+        """.format(start_time=self.get_start_time(),
+                   container=self.get_container_name())
+        return textwrap.dedent(html)
+
+    def make_html(self):
+        html_parts = ['<div class="container">']
+        html_parts.append(self.make_header())
+
+        # Find all messages received by the BA
+        for entry in self.get_io_entries():
+            html_part = entry.make_html()
+            if html_part is not None:
+                html_parts.append(html_part)
+        html_parts.append('</div>')
+        return make_html(html_parts)
+
 
 def logs_to_html_file(log_dir_path, html_file=None):
     if html_file is None:
@@ -245,20 +269,8 @@ def logs_to_html_file(log_dir_path, html_file=None):
 
     log = CwcLog(log_dir_path)
 
-    html_parts = ['<div class="container">']
-
-    start_time = log.get_start_time()
-    html_parts.append(format_start_time(start_time))
-
-    # Find all messages received by the BA
-    for entry in log.get_io_entries():
-        html_part = entry.make_html()
-        if html_part is not None:
-            html_parts.append(html_part)
-    html_parts.append('</div>')
-
     with open(html_file, 'w') as fh:
-        fh.write(make_html(html_parts))
+        fh.write(log.make_html())
     logger.info("Result saved to %s." % html_file)
 
 
