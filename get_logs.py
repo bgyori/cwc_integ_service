@@ -134,6 +134,7 @@ def get_logs_from_s3(folder=None, cached=True):
     print('Found %d keys' % len(keys))
 
     fname_patt = re.compile('([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).tar.gz')
+    dir_set = set()
     for key in tqdm.tqdm(keys):
         fname = os.path.basename(key)
         m = fname_patt.match(fname)
@@ -141,6 +142,7 @@ def get_logs_from_s3(folder=None, cached=True):
         image, cont_hash, cont_name, resource_name = m.groups()
         head_dir_path = '%s_%s_%s' % (image.replace(':', '-'), cont_name,
                                       cont_hash)
+        dir_set.add(head_dir_path)
         if folder:
             head_dir_path = os.path.join(folder, head_dir_path)
         if not os.path.exists(head_dir_path):
@@ -168,6 +170,7 @@ def get_logs_from_s3(folder=None, cached=True):
                 log_txt = efo.read().decode('utf-8')
                 with open(outpath, 'w') as fh:
                     fh.write(log_txt)
+    return dir_set
 
 
 if __name__ == '__main__':
