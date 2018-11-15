@@ -63,8 +63,19 @@
         <p>Last updated {{date}}</p>
     </div>
     <div class="buttons" align="center">
-        <button class="previous" type="button" onclick="moveTo(curr_idx-1)">&laquo; Previous</button>
-        <button class="next" type="button" onclick="moveTo(curr_idx+1)">Next &raquo;</button>
+        <button class="previous" type="button" onclick="moveTo(0)">
+          &laquo;&laquo;First
+        </button>
+        <button class="previous" type="button" onclick="moveTo(curr_idx-1)">
+          &laquo; Previous
+        </button>
+        <button class="next" type="button" onclick="moveTo(curr_idx+1)">
+          Next &raquo;
+        </button>
+        <button class="next" type="button"
+                onclick="moveTo(transcript_list.length-1)">
+          Last &raquo;&raquo;
+        </button>
     </div>
     <div align="center">
       <iframe id="frame" src="" height="800" width="1000"></iframe>
