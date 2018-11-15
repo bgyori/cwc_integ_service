@@ -4,13 +4,13 @@ import json
 import docker
 from os import path
 from datetime import datetime
-from flask import Flask, redirect, render_template, url_for, request, flash
+from flask import Flask, render_template, request
 from flask_wtf import Form
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
 from wtforms import SubmitField
 
-from get_logs import get_logs_for_container
+from logs.get_logs import get_logs_for_container
 
 import logging
 
