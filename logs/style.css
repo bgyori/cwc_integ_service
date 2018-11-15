@@ -1,9 +1,14 @@
-.sys_utterance {
-    background-color: lightblue
+.start_time {
+    background-color: #ffeaea;
 }
 
+.sys_utterance {
+    background-color: #d1e5ff;
+}
+
+
 .usr_utterance {
-    background-color: lightgreen
+    background-color: #ddffdb;
 }
 
 .sys_name {
