@@ -305,8 +305,8 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     if out_file is None:
         out_file = html_file.replace('html', file_type)
 
+    log = CwcLog(log_dir_path)
     if not use_cache or not os.path.exists(html_file):
-        log = CwcLog(log_dir_path)
         html = log.make_html()
 
         with open(html_file, 'w') as fh:
@@ -323,21 +323,25 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
             return
         pdfkit.from_string(html, out_file)
     logger.info("Result saved to %s." % out_file)
-    return out_file
+    return log, out_file
 
 
 if __name__ == '__main__':
     loc = sys.argv[1]
     from get_logs import get_logs_from_s3
     log_dirs = get_logs_from_s3(loc)
+    transcripts = []
     for dirname in log_dirs:
         log_dir = os.path.join(loc, dirname)
-        export_logs(log_dir)
+        log, out_file = export_logs(log_dir)
+        time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
+        transcripts.append((time, out_file))
+    transcripts.sort()
     json_fname = os.path.join(loc, 'transcripts.json')
     with open(json_fname, 'w') as f:
-        json.dump(list(log_dirs), f)
+        json.dump([of for _, of in transcripts], f)
     with open(os.path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
-    html = html_template.format(date=str(datetime.now()))
+    html = html_template.replace('{{date}}', str(datetime.now()))
     with open(os.path.join(loc, 'index.html'), 'w') as f:
         f.write(html)
