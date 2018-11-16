@@ -339,7 +339,7 @@ if __name__ == '__main__':
     transcripts.sort()
     json_fname = os.path.join(loc, 'transcripts.json')
     with open(json_fname, 'w') as f:
-        json.dump([of for _, of in transcripts], f)
+        json.dump([os.path.abspath(of) for _, of in transcripts], f)
     with open(os.path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
     html = html_template.replace('{{date}}', str(datetime.now()))
