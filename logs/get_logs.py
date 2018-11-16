@@ -4,6 +4,7 @@ import re
 import boto3
 import docker
 import tarfile
+from datetime import datetime
 from io import BytesIO
 from indra.util.aws import get_s3_file_tree
 
@@ -68,8 +69,12 @@ def format_cont_date(cont):
 
 
 def make_cont_name(cont):
-    return '%s_%s_%s' % (cont.image.attrs['Id'].split(':')[1][:12],
-                         cont.attrs['Id'].split(':')[1][:12], cont.name)
+    img_date = datetime.strptime(cont.image.attrs['Created'].split('.')[0],
+                                 '%Y-%m-%dT%H:%M:%S')
+    img_id = '%s-%s' % (cont.image.attrs['Id'].split(':')[1][:12],
+                        img_date.strftime('%Y%m%d%H%M%S'))
+    return '%s_%s_%s' % (img_id, cont.attrs['Id'].split(':')[1][:12],
+                         cont.name)
 
 
 def get_logs_for_container(cont):
