@@ -10,6 +10,7 @@ from indra.util.aws import get_s3_file_tree
 import logging
 logger = logging.getLogger('log-getter')
 
+
 def c_ls(container, dirname):
     started = False
     if container.status != 'running':
@@ -67,8 +68,8 @@ def format_cont_date(cont):
 
 
 def make_cont_name(cont):
-    return '%s_%s_%s' % (cont.image.attrs['Config']['Image'].replace(':', '-'),
-                         cont.image.attrs['Config']['Hostname'], cont.name)
+    return '%s_%s_%s' % (cont.image.attrs['Id'].split(':')[1][:12],
+                         cont.attrs['Id'].split(':')[1][:12], cont.name)
 
 
 def get_logs_for_container(cont):
@@ -139,8 +140,8 @@ def get_logs_from_s3(folder=None, cached=True):
         fname = os.path.basename(key)
         m = fname_patt.match(fname)
         assert m is not None, "Failed to match %s" % fname_patt
-        image, cont_hash, cont_name, resource_name = m.groups()
-        head_dir_path = '%s_%s_%s' % (image.replace(':', '-'), cont_name,
+        image_id, cont_hash, cont_name, resource_name = m.groups()
+        head_dir_path = '%s_%s_%s' % (image_id.replace(':', '-'), cont_name,
                                       cont_hash)
         dir_set.add(head_dir_path)
         if folder:
