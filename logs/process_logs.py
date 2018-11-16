@@ -1,7 +1,9 @@
 import os
 import re
 import sys
+import json
 import textwrap
+from datetime import datetime
 
 from kqml import *
 
@@ -185,8 +187,14 @@ class CwcLog(object):
         with open(self.log_file, 'r') as f:
             self.__log = f.read()
         self.start_time = None
-        self.container_name = None
-        self.all_entries = None
+
+        # Parse out information regarding the container from the dirname.
+        m = self.container_name_patt.match(os.path.basename(self.log_dir))
+        if m is None:
+            res = (None, None, None)
+        else:
+            res = m.groups()
+        self.image_id, self.container_name, self.container_hash = res
 
         # Get familiar with the image stash, if present.
         self.img_dir = os.path.join(log_dir, IMG_DIRNAME)
@@ -197,16 +205,10 @@ class CwcLog(object):
                            "will have no images included." % self.img_dir)
             self.img_dir = None
 
-        # This is filled later.
+        # These are filled later.
+        self.all_entries = None
         self.io_entries = None
         return
-
-    def get_container_name(self):
-        if self.container_name is None:
-            m = self.container_name_patt.match(os.path.basename(self.log_dir))
-            assert m is not None, "Failed to get container name."
-            self.container_name = m.groups()[1]
-        return self.container_name
 
     def get_start_time(self):
         if self.start_time is None:
@@ -249,11 +251,11 @@ class CwcLog(object):
         html = """
         <div class="row start_time">
           <div class="col-sm">
-            Dialogue with {container} started at: {start_time}
+            Dialogue with {container} running image {image} started at: {start}
           </div>
         </div>
-        """.format(start_time=self.get_start_time(),
-                   container=self.get_container_name())
+        """.format(start=self.get_start_time(), container=self.container_name,
+                   image=self.image_id)
         return textwrap.dedent(html)
 
     def make_html(self):
@@ -303,8 +305,8 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     if out_file is None:
         out_file = html_file.replace('html', file_type)
 
+    log = CwcLog(log_dir_path)
     if not use_cache or not os.path.exists(html_file):
-        log = CwcLog(log_dir_path)
         html = log.make_html()
 
         with open(html_file, 'w') as fh:
@@ -321,8 +323,25 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
             return
         pdfkit.from_string(html, out_file)
     logger.info("Result saved to %s." % out_file)
-    return out_file
+    return log, out_file
 
 
 if __name__ == '__main__':
-    export_logs(sys.argv[1])
+    loc = sys.argv[1]
+    from get_logs import get_logs_from_s3
+    log_dirs = get_logs_from_s3(loc)
+    transcripts = []
+    for dirname in log_dirs:
+        log_dir = os.path.join(loc, dirname)
+        log, out_file = export_logs(log_dir)
+        time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
+        transcripts.append((time, out_file))
+    transcripts.sort()
+    json_fname = os.path.join(loc, 'transcripts.json')
+    with open(json_fname, 'w') as f:
+        json.dump([os.path.abspath(of) for _, of in transcripts], f)
+    with open(os.path.join(THIS_DIR, 'index_template.html'), 'r') as f:
+        html_template = f.read()
+    html = html_template.replace('{{date}}', str(datetime.now()))
+    with open(os.path.join(loc, 'index.html'), 'w') as f:
+        f.write(html)
