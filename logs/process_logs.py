@@ -187,8 +187,14 @@ class CwcLog(object):
         with open(self.log_file, 'r') as f:
             self.__log = f.read()
         self.start_time = None
-        self.container_name = None
-        self.all_entries = None
+
+        # Parse out information regarding the container from the dirname.
+        m = self.container_name_patt.match(os.path.basename(self.log_dir))
+        if m is None:
+            res = (None, None, None)
+        else:
+            res = m.groups()
+        self.image_id, self.container_name, self.container_hash = res
 
         # Get familiar with the image stash, if present.
         self.img_dir = os.path.join(log_dir, IMG_DIRNAME)
@@ -199,16 +205,10 @@ class CwcLog(object):
                            "will have no images included." % self.img_dir)
             self.img_dir = None
 
-        # This is filled later.
+        # These are filled later.
+        self.all_entries = None
         self.io_entries = None
         return
-
-    def get_container_name(self):
-        if self.container_name is None:
-            m = self.container_name_patt.match(os.path.basename(self.log_dir))
-            assert m is not None, "Failed to get container name."
-            self.container_name = m.groups()[1]
-        return self.container_name
 
     def get_start_time(self):
         if self.start_time is None:
@@ -251,11 +251,11 @@ class CwcLog(object):
         html = """
         <div class="row start_time">
           <div class="col-sm">
-            Dialogue with {container} started at: {start_time}
+            Dialogue with {container} running image {image} started at: {start}
           </div>
         </div>
-        """.format(start_time=self.get_start_time(),
-                   container=self.get_container_name())
+        """.format(start=self.get_start_time(), container=self.container_name,
+                   image=self.image_id)
         return textwrap.dedent(html)
 
     def make_html(self):
