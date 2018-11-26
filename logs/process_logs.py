@@ -25,7 +25,7 @@ def make_html(html_parts):
 class CwcLogEntry(object):
     """Parent class for entries in the logs."""
     possible_sems = ('sys_utterance', 'user_utterance', 'display_image',
-                     'add_provenance', 'display_sbgn')
+                     'add_provenance', 'display_sbgn', 'reset')
 
     def __init__(self, type, time, message, partner, log_dir):
         self.type = type
@@ -94,7 +94,7 @@ class CwcLogEntry(object):
             msg_sm = 'usr_msg'
         elif self.is_sem('add_provenance'):
             print("SYS sent provenance.")
-            inp = cont.gets('html')
+            inp = cont.gets('html').replace('<hr>', '')
             name = 'Bob (provenance)'
             back_clr = bob_back
             col_sm = 'sys_name'
@@ -119,6 +119,9 @@ class CwcLogEntry(object):
             back_clr = bob_back
             col_sm = 'sys_name'
             msg_sm = 'sys_image'
+        elif self.is_sem('reset'):
+            print("------------- RESET -----------")
+            return "<hr width=\"75%\">"
         else:
             return None
         return textwrap.dedent(fmt.format(time=self.time, inp=inp, name=name,
@@ -154,6 +157,14 @@ class CwcLogEntry(object):
                     and self._cont_is_type('tell', 'utterance'):
                 return True
             return False
+        elif msg_type == 'reset':
+            is_shout = (self.partner and self.partner.upper() == 'BA' and
+                        self._cont_is_type('broadcast', 'tell'))
+            if not is_shout:
+                return False
+            inner_content = self.content.get('content').get('content')
+            return (is_shout and inner_content
+                    and inner_content.head().upper() == 'START-CONVERSATION')
         logger.warning("Unrecognized message type: %s" % msg_type)
         return False
 
