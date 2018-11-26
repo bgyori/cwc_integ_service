@@ -41,7 +41,7 @@
         })
         function loadList() {
             // Load the json list of transcripts
-            return $.ajax({url: "transcripts.json", dataType: "json"});
+            return $.ajax({url: "transcripts.json", dataType: "json", mimeType: "application/json"});
         }
         function moveTo (new_idx) {
             // Go to the indicated value.
