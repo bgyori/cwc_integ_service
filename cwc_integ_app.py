@@ -224,11 +224,12 @@ def _launch_app(interface_port_num, app_name, extension=''):
     base_host = 'http://' + str(request.host).split(':')[0]
     host = base_host + (':%d' % port + extension)
     logger.info('Will redirect to address: %s' % host)
-    cont_id = _run_container(port, interface_port_num, app_name)
+    cont_id, cont_name = _run_container(port, interface_port_num, app_name)
     logger.info('Start redirecting %s interface.' % app_name)
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
-                           time_out=90)
+                           time_out=90, container_name=cont_name,
+                           interface=app_name)
 
 
 class ClicForm(Form):
@@ -292,7 +293,7 @@ def _run_container(port, expose_port, app_name):
     logger.info('Launched container %s exposing port %d via port %d'
                 % (cont, expose_port, port))
     _add_my_container(cont.id, app_name)
-    return cont.id
+    return cont.id, cont.name
 
 
 def reset_sessions():
