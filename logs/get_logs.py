@@ -76,11 +76,12 @@ def make_cont_name(cont):
     return '%s_%s_%s' % (img_id, cont.attrs['Id'][:12], cont.name)
 
 
-def get_logs_for_container(cont):
+def get_logs_for_container(cont, interface):
     tasks = [get_session_logs, get_run_logs, get_bioagent_images]
     fnames = []
     for task in tasks:
         fname = task(cont)
+        fname = interface + '-' + fname
         logger.info("Saved %s locally." % fname)
         fnames.append(fname)
         _dump_on_s3(fname)
