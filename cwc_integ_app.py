@@ -77,8 +77,8 @@ def _record_my_container(cont_id, action):
             success = False
         elif action == 'remove':
             date = id_dict.pop(cont_id)
-            logger.info("Removing %s from list of my containers which was started "
-                  "at %s." % (cont_id, date))
+            logger.info("Removing %s from list of my containers which was "
+                        "started at %s." % (cont_id, date))
     if success:
         _dump_id_dict(id_dict)
     return success
@@ -104,12 +104,14 @@ def _check_timers():
         # Grab the date from the latest SPG log entry.
         cont = client.containers.get(cont_id)
         cont_logs = cont.logs()
-        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]', cont_logs.decode('utf-8'))
+        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]',
+                                  cont_logs.decode('utf-8'))
         if date_strings:
-            latest_log_date = datetime.strptime(date_strings[-1], '%m/%d/%Y %H:%M:%S')
+            latest_log_date = datetime.strptime(date_strings[-1],
+                                                '%m/%d/%Y %H:%M:%S')
         else:
-            logger.info("WARNING: Did not find any date strings in container logs "
-                  "for %s." % cont_id)
+            logger.info("WARNING: Did not find any date strings in container "
+                        "logs for %s." % cont_id)
             latest_log_date = start_date
 
         # Check both whether the logs have been silent for more than a day
@@ -118,8 +120,8 @@ def _check_timers():
         log_stalled = (now - latest_log_date).seconds
         total_dur = (now - start_date).seconds
         if log_stalled > 3600:
-            logger.info("Container %s timed out after %d seconds of empty logs."
-                  % (cont_id, log_stalled))
+            logger.info("Container %s timed out after %ds of empty logs."
+                        % (cont_id, log_stalled))
             _stop_container(cont_id)
         elif total_dur > DAY/2:
             logger.info("Container %s timed out after %d seconds of running."
@@ -322,6 +324,7 @@ def monitor():
         logger.info("Monitor is closing with:")
         logger.exception(e)
     return
+
 
 if __name__ == '__main__':
     from sys import argv
