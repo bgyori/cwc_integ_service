@@ -44,15 +44,22 @@ def _load_id_dict():
     id_dict = {}
     with open(MY_CONTAINER_LIST, 'r') as f:
         id_dict_strs = json.load(f)
-    for id_val, date_str in id_dict_strs.items():
-        id_dict[id_val] = datetime.strptime(date_str, TIME_FMT)
+    for id_val, data in id_dict_strs.items():
+        for key, val in data.items():
+            if key == 'date':
+                data[key] = datetime.strptime(val, TIME_FMT)
+        id_dict[id_val] = data
     return id_dict
 
 
 def _dump_id_dict(id_dict):
     json_dict = {}
-    for id_val, date in id_dict.items():
-        json_dict[id_val] = date.strftime(TIME_FMT)
+    for id_val, data in id_dict.items():
+        json_data = data.copy()
+        for key, val in data.items():
+            if key == 'date':
+                json_data[key] = val.strftime(TIME_FMT)
+        json_dict[id_val] = json_data
     with open(MY_CONTAINER_LIST, 'w') as f:
         json.dump(json_dict, f)
     return
@@ -64,7 +71,7 @@ def _add_my_container(cont_id, interface):
 
     if cont_id not in id_dict.keys():
         logger.info("Adding %s to list of my containers." % cont_id)
-        id_dict[cont_id] = (interface, datetime.utcnow())
+        id_dict[cont_id] = {'interface': interface, 'date': datetime.utcnow()}
         _dump_id_dict(id_dict)
         success = True
     else:
@@ -86,9 +93,8 @@ def _pop_my_container(cont_id, pop=True):
             ret = id_dict.pop(cont_id)
         else:
             ret = id_dict.get(cont_id)
-        logger.info("Removing %s from list of my containers which was "
-                    "started at %s using the %s interface."
-                    % (cont_id,) + ret)
+        logger.info("Removing %s from list of my containers which had "
+                    "metadata: %s." % (cont_id, ret))
         _dump_id_dict(id_dict)
 
     return ret
@@ -264,11 +270,10 @@ def _stop_container(cont_id, remove_record=True):
     if remove_record:
         assert record is not None, \
             "Could not remove container because it is not my own."
-    interface, date = record
     client = docker.from_env()
     cont = client.containers.get(cont_id)
     logger.info("Got container %s, aka %s." % (cont.id, cont.name))
-    get_logs_for_container(cont, interface)
+    get_logs_for_container(cont, record['interface'])
     cont.stop()
     cont.remove()
     logger.info("Container removed.")
