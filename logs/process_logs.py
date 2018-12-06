@@ -121,7 +121,7 @@ class CwcLogEntry(object):
             msg_sm = 'sys_image'
         elif self.is_sem('reset'):
             print("------------- RESET -----------")
-            return "<hr width=\"75%\">"
+            return "<hr width=\"75%\" size=\"3\" noshade>"
         else:
             return None
         return textwrap.dedent(fmt.format(time=self.time, inp=inp, name=name,
