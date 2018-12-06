@@ -80,8 +80,15 @@ def get_logs_for_container(cont, interface):
     tasks = [get_session_logs, get_run_logs, get_bioagent_images]
     fnames = []
     for task in tasks:
+        # Get the logs.
         fname = task(cont)
-        fname = interface + '-' + fname
+
+        # Rename the log file. This is a little hacky, but it should work.
+        new_fname = interface + '-' + fname
+        os.rename(fname, new_fname)
+        fname = new_fname
+
+        # Add the file to s3.
         logger.info("Saved %s locally." % fname)
         fnames.append(fname)
         _dump_on_s3(fname)
