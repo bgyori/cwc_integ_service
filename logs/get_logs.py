@@ -73,8 +73,7 @@ def make_cont_name(cont):
                                  '%Y-%m-%dT%H:%M:%S')
     img_id = '%s-%s' % (cont.image.attrs['Id'].split(':')[1][:12],
                         img_date.strftime('%Y%m%d%H%M%S'))
-    return '%s_%s_%s' % (img_id, cont.attrs['Id'].split(':')[1][:12],
-                         cont.name)
+    return '%s_%s_%s' % (img_id, cont.attrs['Id'][:12], cont.name)
 
 
 def get_logs_for_container(cont):
