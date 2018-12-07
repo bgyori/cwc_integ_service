@@ -207,6 +207,21 @@ class CwcLog(object):
             res = m.groups()
         self.image_id, self.container_name, self.container_hash = res
 
+        # Get the interface from the image_id if available.
+        if self.image_id.lower().startswith('clic'):
+            self.interface = 'CLIC'
+            self.image_id = self.image_id[4:].lstrip('-')
+        elif self.image_id.lower().startswith('sbgn'):
+            self.interface = 'SBGN'
+            self.image_id = self.image_id[4:].lstrip('-')
+        else:
+            self.interface = 'UNKNOWN'
+
+        # Get the date out of the image name, if present.
+        # WARNING: This way of doing it will break in around 80 years.
+        if '-20' in self.image_id:
+            self.image_id = self.image_id.split('-')[0]
+
         # Get familiar with the image stash, if present.
         self.img_dir = os.path.join(log_dir, IMG_DIRNAME)
         if not os.path.exists(self.img_dir):
@@ -262,11 +277,12 @@ class CwcLog(object):
         html = """
         <div class="row start_time">
           <div class="col-sm">
-            Dialogue with {container} running image {image} started at: {start}
+            Dialogue running {container} container with image {image} using
+            the {interface} interface started at: {start}
           </div>
         </div>
         """.format(start=self.get_start_time(), container=self.container_name,
-                   image=self.image_id)
+                   image=self.image_id, interface=self.interface)
         return textwrap.dedent(html)
 
     def make_html(self):
