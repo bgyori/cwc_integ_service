@@ -73,15 +73,22 @@ def make_cont_name(cont):
                                  '%Y-%m-%dT%H:%M:%S')
     img_id = '%s-%s' % (cont.image.attrs['Id'].split(':')[1][:12],
                         img_date.strftime('%Y%m%d%H%M%S'))
-    return '%s_%s_%s' % (img_id, cont.attrs['Id'].split(':')[1][:12],
-                         cont.name)
+    return '%s_%s_%s' % (img_id, cont.attrs['Id'][:12], cont.name)
 
 
-def get_logs_for_container(cont):
+def get_logs_for_container(cont, interface):
     tasks = [get_session_logs, get_run_logs, get_bioagent_images]
     fnames = []
     for task in tasks:
+        # Get the logs.
         fname = task(cont)
+
+        # Rename the log file. This is a little hacky, but it should work.
+        new_fname = interface + '-' + fname
+        os.rename(fname, new_fname)
+        fname = new_fname
+
+        # Add the file to s3.
         logger.info("Saved %s locally." % fname)
         fnames.append(fname)
         _dump_on_s3(fname)
@@ -134,7 +141,7 @@ def get_logs_from_s3(folder=None, cached=True):
     # facilitator
     print(len(keys))
     print(len([k for k in keys if 'image' in k]))
-    keys = [key for key in keys if key.startswith('bob_ec2_logs/cwc-integ')
+    keys = [key for key in keys if key.startswith('bob_ec2_logs/')
             and key.endswith('.tar.gz')]
     print(len(keys))
     print('Found %d keys' % len(keys))
@@ -144,7 +151,10 @@ def get_logs_from_s3(folder=None, cached=True):
     for key in tqdm.tqdm(keys):
         fname = os.path.basename(key)
         m = fname_patt.match(fname)
-        assert m is not None, "Failed to match %s" % fname_patt
+        if m is None:
+            logger.warning("File name %s failed to match %s. Skipping..."
+                           % (fname, fname_patt))
+            continue
         image_id, cont_hash, cont_name, resource_name = m.groups()
         head_dir_path = '%s_%s_%s' % (image_id.replace(':', '-'), cont_name,
                                       cont_hash)

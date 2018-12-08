@@ -44,44 +44,60 @@ def _load_id_dict():
     id_dict = {}
     with open(MY_CONTAINER_LIST, 'r') as f:
         id_dict_strs = json.load(f)
-    for id_val, date_str in id_dict_strs.items():
-        id_dict[id_val] = datetime.strptime(date_str, TIME_FMT)
+    for id_val, data in id_dict_strs.items():
+        for key, val in data.items():
+            if key == 'date':
+                data[key] = datetime.strptime(val, TIME_FMT)
+        id_dict[id_val] = data
     return id_dict
 
 
 def _dump_id_dict(id_dict):
     json_dict = {}
-    for id_val, date in id_dict.items():
-        json_dict[id_val] = date.strftime(TIME_FMT)
+    for id_val, data in id_dict.items():
+        json_data = data.copy()
+        for key, val in data.items():
+            if key == 'date':
+                json_data[key] = val.strftime(TIME_FMT)
+        json_dict[id_val] = json_data
     with open(MY_CONTAINER_LIST, 'w') as f:
         json.dump(json_dict, f)
     return
 
 
-def _record_my_container(cont_id, action):
-    """Update the json containing the statuses of the containers."""
-    assert action in ['add', 'remove'], "Invalid action: %s" % action
+def _add_my_container(cont_id, interface):
+    """Update the json with a new container."""
     id_dict = _load_id_dict()
 
-    success = True
     if cont_id not in id_dict.keys():
-        if action == 'add':
-            logger.info("Adding %s to list of my containers." % cont_id)
-            id_dict[cont_id] = datetime.utcnow()
-        elif action == 'remove':
-            logger.info("This container isn't mine or doesn't exist.")
-            success = False
-    else:
-        if action == 'add':
-            logger.info("This container was already registered.")
-            success = False
-        elif action == 'remove':
-            date = id_dict.pop(cont_id)
-            logger.info("Removing %s from list of my containers which was started "
-                  "at %s." % (cont_id, date))
-    if success:
+        logger.info("Adding %s to list of my containers." % cont_id)
+        id_dict[cont_id] = {'interface': interface, 'date': datetime.utcnow()}
         _dump_id_dict(id_dict)
+        success = True
+    else:
+        logger.info("This container was already registered.")
+        success = False
+
     return success
+
+
+def _pop_my_container(cont_id, pop=True):
+    """Update the json with the removal of a container."""
+    id_dict = _load_id_dict()
+
+    if cont_id not in id_dict.keys():
+        logger.info("This container isn't mine or doesn't exist.")
+        ret = None
+    else:
+        if pop:
+            ret = id_dict.pop(cont_id)
+        else:
+            ret = id_dict.get(cont_id)
+        logger.info("Removing %s from list of my containers which had "
+                    "metadata: %s." % (cont_id, ret))
+        _dump_id_dict(id_dict)
+
+    return ret
 
 
 def _check_timers():
@@ -104,12 +120,14 @@ def _check_timers():
         # Grab the date from the latest SPG log entry.
         cont = client.containers.get(cont_id)
         cont_logs = cont.logs()
-        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]', cont_logs.decode('utf-8'))
+        date_strings = re.findall('SPG:\s+;;\s+\[(.*?)\]',
+                                  cont_logs.decode('utf-8'))
         if date_strings:
-            latest_log_date = datetime.strptime(date_strings[-1], '%m/%d/%Y %H:%M:%S')
+            latest_log_date = datetime.strptime(date_strings[-1],
+                                                '%m/%d/%Y %H:%M:%S')
         else:
-            logger.info("WARNING: Did not find any date strings in container logs "
-                  "for %s." % cont_id)
+            logger.info("WARNING: Did not find any date strings in container "
+                        "logs for %s." % cont_id)
             latest_log_date = start_date
 
         # Check both whether the logs have been silent for more than a day
@@ -118,8 +136,8 @@ def _check_timers():
         log_stalled = (now - latest_log_date).seconds
         total_dur = (now - start_date).seconds
         if log_stalled > 3600:
-            logger.info("Container %s timed out after %d seconds of empty logs."
-                  % (cont_id, log_stalled))
+            logger.info("Container %s timed out after %ds of empty logs."
+                        % (cont_id, log_stalled))
             _stop_container(cont_id)
         elif total_dur > DAY/2:
             logger.info("Container %s timed out after %d seconds of running."
@@ -206,11 +224,12 @@ def _launch_app(interface_port_num, app_name, extension=''):
     base_host = 'http://' + str(request.host).split(':')[0]
     host = base_host + (':%d' % port + extension)
     logger.info('Will redirect to address: %s' % host)
-    cont_id = _run_container(port, interface_port_num)
+    cont_id, cont_name = _run_container(port, interface_port_num, app_name)
     logger.info('Start redirecting %s interface.' % app_name)
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
-                           time_out=90)
+                           time_out=90, container_name=cont_name,
+                           interface=app_name)
 
 
 class ClicForm(Form):
@@ -248,13 +267,14 @@ def stop_session(cont_id):
 
 
 def _stop_container(cont_id, remove_record=True):
+    record = _pop_my_container(cont_id, pop=remove_record)
     if remove_record:
-        assert _record_my_container(cont_id, 'remove'), \
+        assert record is not None, \
             "Could not remove container because it is not my own."
     client = docker.from_env()
     cont = client.containers.get(cont_id)
     logger.info("Got container %s, aka %s." % (cont.id, cont.name))
-    get_logs_for_container(cont)
+    get_logs_for_container(cont, record['interface'])
     cont.stop()
     cont.remove()
     logger.info("Container removed.")
@@ -262,7 +282,7 @@ def _stop_container(cont_id, remove_record=True):
     return
 
 
-def _run_container(port, expose_port):
+def _run_container(port, expose_port, app_name):
     num_sessions = increment_sessions()
     logger.info('We now have %d active sessions' % num_sessions)
     client = docker.from_env()
@@ -270,10 +290,10 @@ def _run_container(port, expose_port):
                                  '/sw/cwc-integ/startup.sh',
                                  detach=True,
                                  ports={('%d/tcp' % expose_port): port})
-    logger.info('Launched container %s exposing port %d via port %d' %
-          (cont, expose_port, port))
-    _record_my_container(cont.id, 'add')
-    return cont.id
+    logger.info('Launched container %s exposing port %d via port %d'
+                % (cont, expose_port, port))
+    _add_my_container(cont.id, app_name)
+    return cont.id, cont.name
 
 
 def reset_sessions():
@@ -322,6 +342,7 @@ def monitor():
         logger.info("Monitor is closing with:")
         logger.exception(e)
     return
+
 
 if __name__ == '__main__':
     from sys import argv

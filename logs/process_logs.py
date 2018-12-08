@@ -25,7 +25,7 @@ def make_html(html_parts):
 class CwcLogEntry(object):
     """Parent class for entries in the logs."""
     possible_sems = ('sys_utterance', 'user_utterance', 'display_image',
-                     'add_provenance', 'display_sbgn')
+                     'add_provenance', 'display_sbgn', 'reset')
 
     def __init__(self, type, time, message, partner, log_dir):
         self.type = type
@@ -94,7 +94,7 @@ class CwcLogEntry(object):
             msg_sm = 'usr_msg'
         elif self.is_sem('add_provenance'):
             print("SYS sent provenance.")
-            inp = cont.gets('html')
+            inp = cont.gets('html').replace('<hr>', '')
             name = 'Bob (provenance)'
             back_clr = bob_back
             col_sm = 'sys_name'
@@ -119,6 +119,9 @@ class CwcLogEntry(object):
             back_clr = bob_back
             col_sm = 'sys_name'
             msg_sm = 'sys_image'
+        elif self.is_sem('reset'):
+            print("------------- RESET -----------")
+            return "<hr width=\"75%\" size=\"3\" noshade>"
         else:
             return None
         return textwrap.dedent(fmt.format(time=self.time, inp=inp, name=name,
@@ -154,6 +157,14 @@ class CwcLogEntry(object):
                     and self._cont_is_type('tell', 'utterance'):
                 return True
             return False
+        elif msg_type == 'reset':
+            is_shout = (self.partner and self.partner.upper() == 'BA' and
+                        self._cont_is_type('broadcast', 'tell'))
+            if not is_shout:
+                return False
+            inner_content = self.content.get('content').get('content')
+            return (is_shout and inner_content
+                    and inner_content.head().upper() == 'START-CONVERSATION')
         logger.warning("Unrecognized message type: %s" % msg_type)
         return False
 
@@ -195,6 +206,21 @@ class CwcLog(object):
         else:
             res = m.groups()
         self.image_id, self.container_name, self.container_hash = res
+
+        # Get the interface from the image_id if available.
+        if self.image_id.lower().startswith('clic'):
+            self.interface = 'CLIC'
+            self.image_id = self.image_id[4:].lstrip('-')
+        elif self.image_id.lower().startswith('sbgn'):
+            self.interface = 'SBGN'
+            self.image_id = self.image_id[4:].lstrip('-')
+        else:
+            self.interface = 'UNKNOWN'
+
+        # Get the date out of the image name, if present.
+        # WARNING: This way of doing it will break in around 80 years.
+        if '-20' in self.image_id:
+            self.image_id = self.image_id.split('-')[0]
 
         # Get familiar with the image stash, if present.
         self.img_dir = os.path.join(log_dir, IMG_DIRNAME)
@@ -251,11 +277,12 @@ class CwcLog(object):
         html = """
         <div class="row start_time">
           <div class="col-sm">
-            Dialogue with {container} running image {image} started at: {start}
+            Dialogue running {container} container with image {image} using
+            the {interface} interface started at: {start}
           </div>
         </div>
         """.format(start=self.get_start_time(), container=self.container_name,
-                   image=self.image_id)
+                   image=self.image_id, interface=self.interface)
         return textwrap.dedent(html)
 
     def make_html(self):
@@ -339,7 +366,7 @@ if __name__ == '__main__':
     transcripts.sort()
     json_fname = os.path.join(loc, 'transcripts.json')
     with open(json_fname, 'w') as f:
-        json.dump([os.path.abspath(of) for _, of in transcripts], f)
+        json.dump([os.path.abspath(of) for _, of in transcripts], f, indent=1)
     with open(os.path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
     html = html_template.replace('{{date}}', str(datetime.now()))

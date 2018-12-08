@@ -44,11 +44,14 @@
     </div>
 </div>
 <div class="container">
+    <div id="session_div" align="center" class="well well-sm">
+        You are running on the docker container named {{container_name}}
+        using the {{interface}} interface.
+    </div>
     <div id="end_div" align="center" class="well well-sm">
         When done, click this button to end your session:
         <button type="button" onclick="submit_delete()">End Session</button>
     </div>
-    
 </div>
 <div id="dialogue_div" style="display: none;">
     <iframe align="middle" width="1700" height="1500" src="" id="dialogue_frame" frameborder="0" allowfullscreen>
