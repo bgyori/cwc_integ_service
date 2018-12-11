@@ -114,7 +114,8 @@ def _check_timers():
 
     # Go through all the containers...
     client = docker.from_env()
-    for cont_id, start_date in id_dict.items():
+    for cont_id, data in id_dict.items():
+        start_date = data['date']
         logger.info("Examining %s" % cont_id)
 
         # Grab the date from the latest SPG log entry.
