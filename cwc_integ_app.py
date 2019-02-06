@@ -36,6 +36,7 @@ Bootstrap(app)
 MY_CONTAINER_LIST = 'cwc_service_containers.json'
 TIME_FMT = '%Y%m%d%H%M%S'
 DAY = 86400  # a day in seconds.
+HOUR = 3600  # an hour in seconds.
 
 
 def _load_id_dict():
@@ -136,7 +137,7 @@ def _check_timers():
         # days (hogging).
         log_stalled = (now - latest_log_date).seconds
         total_dur = (now - start_date).seconds
-        if log_stalled > 3600:
+        if log_stalled > 2*HOUR:
             logger.info("Container %s timed out after %ds of empty logs."
                         % (cont_id, log_stalled))
             _stop_container(cont_id)
@@ -287,7 +288,7 @@ def _run_container(port, expose_port, app_name):
     num_sessions = increment_sessions()
     logger.info('We now have %d active sessions' % num_sessions)
     client = docker.from_env()
-    cont = client.containers.run('cwc-integ:latest',
+    cont = client.containers.run('cwc-integ:dev',
                                  '/sw/cwc-integ/startup.sh',
                                  detach=True,
                                  ports={('%d/tcp' % expose_port): port})
