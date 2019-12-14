@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CWC Log Browser</title>
+  <!-- Inline scripts -->
+
+</head>
+<body>
+  <div class="container">
+    <table>
+      <thead>
+        <tr>
+          <th>Session ID</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for sid in sess_id_list %}
+        <tr>
+          <td><a href="/browse/{{ sid }}">link</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
