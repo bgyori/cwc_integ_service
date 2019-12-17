@@ -3,21 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <title>CWC Log Browser</title>
-  <!-- Inline scripts -->
 
+  <!-- JS libraries -->
+  <!-- BootStrap 4.1.3 -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+
+  <!-- CSS -->
+  <!-- BS 4.1.3 css -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+  <!-- Inline scripts -->
 </head>
 <body>
+  <h3 class="header">CWC Log Browser</h3>
   <div class="container">
-    <table>
+    <table class="table">
       <thead>
         <tr>
-          <th>Session ID</th>
+          <th class="align-left">Page</th>
+          <th class="align-left">Session ID</th>
+          <th class="align-left">Date</th>
+          <th class="align-left">User (if known)</th>
         </tr>
       </thead>
       <tbody>
-      {% for sid in sess_id_list %}
+      {% for sess_id, dt_str, user in sess_id_list %}
         <tr>
-          <td><a href="/browse/{{ sid }}">link</a></td>
+          <td class="number-column">{{ loop.index0 }}</td>
+          <td><a href="/browse?page={{ loop.index0 }}" title="Go to page {{ loop.index0 }}">{{ sess_id }}</a></td>
+          <td>{{ dt_str }}</td>
+          <td>{{ user }}</td>
         </tr>
       {% endfor %}
       </tbody>
