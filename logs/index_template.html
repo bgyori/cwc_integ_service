@@ -43,7 +43,7 @@
         let sess_id = transcript_list[new_idx];
         console.log(`sess_id=${sess_id}`);
         curr_idx = new_idx;
-        document.getElementById("page-count").textContent = `${new_idx}`;
+        document.getElementById("page-count").textContent = `Current page: ${new_idx} of ${transcript_list.length-1}`;
         document.getElementById("frame").src = `iframe_page/${sess_id}`;
       }
     </script>
