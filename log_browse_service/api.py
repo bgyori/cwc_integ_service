@@ -58,20 +58,28 @@ if GLOBAL_PRELOAD:
     update_session_list()
 
 
-@app.route('/browse/<sessionid>')
-def browse(sessionid):
-    # This route should load the log with the given sessionid
-    if sessionid in session_list_cache:
-        return render_template('_logs/%s/transcript.html' % sessionid)
-    else:
-        return '_logs/%s/transcript.html not found' % sessionid
+@app.route('/browse')
+def browse():
+    # This route should render "index_template" showing the first log
+    # (default) or the provided page number (zero-indexed)
+    page = request.args.get('page', 0)
+    return render_template('/%s/log_view.html' % LOGS_DIR_NAME,
+                           transcript_json=[t[0] for t in session_list_cache],
+                           page=page,
+                           base_url=url_for('browse'))
+
+
+@app.route('/iframe_page/<sess_id>')
+def iframe_page(sess_id):
+    return render_template('/%s/%s/transcript.html' % (LOGS_DIR_NAME, sess_id))
 
 
 @app.route('/')
-@app.route('/browse')
+@app.route('/index')
 def index():
-    # This route should list all the session ids with the user(s?), time and
-    # date. Clicking on one of them should link to the /browser/<sessionid>
-    # route.
-    return render_template('browse_index.html', sess_id_list=list(
-        session_list_cache.keys()))
+    # This route should list all the session ids with the user(s?), time
+    # and date. Clicking on one of them should link to the index page and
+    # set curr_idx to the corresponding
+    update_session_list()
+    return render_template('browse_index.html',
+                           sess_id_list=session_list_cache)
