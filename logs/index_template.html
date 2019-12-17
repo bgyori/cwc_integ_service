@@ -32,55 +32,47 @@
         }
     </style>
     <script type="text/javascript">
-        var curr_idx = 0;
-        var transcript_list = [];
-        let list_promise = loadList();
-        list_promise.then(function(result_list) {
-            console.log(result_list);
-            transcript_list = result_list;
-        })
-        function loadList() {
-            // Load the json list of transcripts
-            return $.ajax({url: "transcripts.json", dataType: "json", mimeType: "application/json"});
+      let curr_idx = {{ page }};
+      let transcript_list = {{ transcript_json|safe }}
+      function moveToPage(new_idx) {
+        // Go to the indicated value.
+        if (new_idx < 0 || new_idx >= transcript_list.length) {
+          return;
         }
-        function moveTo (new_idx) {
-            // Go to the indicated value.
-            if (new_idx < 0 || new_idx >= transcript_list.length) {
-                return;
-            }
-            console.log(new_idx);
-            console.log(transcript_list);
-            let url = transcript_list[new_idx];
-            console.log(url);
-            curr_idx = new_idx;
-            document.getElementById("frame").src = url;
-        }
+        console.log(`new_idx=${new_idx}`);
+        let sess_id = transcript_list[new_idx];
+        console.log(`sess_id=${sess_id}`);
+        curr_idx = new_idx;
+        document.getElementById("page-count").textContent = `${new_idx}`;
+        document.getElementById("frame").src = `iframe_page/${sess_id}`;
+      }
     </script>
   </head>
   <body>
     <div align="center">
-        <h2>Transcript Browser</h2>
-        <p>Last updated {{date}}</p>
+      <h2>Transcript Browser</h2>
+      <p>Last updated <<__DATE__>></p>
+      <p id="page-count">Current page: {{ page }}</p>
     </div>
     <div class="buttons" align="center">
-        <button class="previous" type="button" onclick="moveTo(0)">
-          &laquo;&laquo;First
-        </button>
-        <button class="previous" type="button" onclick="moveTo(curr_idx-1)">
-          &laquo; Previous
-        </button>
-        <button class="next" type="button" onclick="moveTo(curr_idx+1)">
-          Next &raquo;
-        </button>
-        <button class="next" type="button"
-                onclick="moveTo(transcript_list.length-1)">
-          Last &raquo;&raquo;
-        </button>
+      <button class="previous" type="button" onclick="moveToPage(0)">
+        &laquo;&laquo;First
+      </button>
+      <button class="previous" type="button" onclick="moveToPage(curr_idx-1)">
+        &laquo; Previous
+      </button>
+      <button class="next" type="button" onclick="moveToPage(curr_idx+1)">
+        Next &raquo;
+      </button>
+      <button class="next" type="button"
+              onclick="moveToPage(transcript_list.length-1)">
+        Last &raquo;&raquo;
+      </button>
     </div>
     <div align="center">
       <iframe id="frame" src="" height="800" width="1000"></iframe>
       <script type="text/javascript">
-        moveTo(0);
+        moveToPage({{ page }});
       </script>
     </div>
   </body>
