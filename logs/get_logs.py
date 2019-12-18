@@ -127,15 +127,34 @@ def get_logs():
     return
 
 
-def get_logs_from_s3(folder=None, cached=True):
-    """Download logs from S3 and save into a local folder"""
-    import tqdm
+def get_logs_from_s3(folder=None, cached=True, past_days=None):
+    """Download logs from S3 and save into a local folder
 
-    # TODO: We are going to have to page through s3 logs. We can only get at
-    # most 1000 items. I wrote something to handle this here:
-    # https://github.com/indralab/indra_db/blob/a32132a2a8ecb10fea07666abafbffb50dd77679/indra_db/reading/submit_reading_pipeline.py#L193-L204
-    s3 = boto3.client('s3')
-    tree = get_s3_file_tree(s3, 'cwc-hms', 'bob_ec2_logs')
+    Parameters
+    ----------
+    folder : str
+        The directory where to put the processed reports
+    cached : str
+        Look for already existing folders and skip those that exist
+    past_days : int|datetime.datetime
+        Either an integer or an instance of a datetime.datetime object
+        specifying the number of days into the past to download logs for.
+        If nothing is specified (default), all logs are downloaded.
+        Default: None.
+
+    Returns
+    -------
+    dir_set : set
+        A set containing the dir paths of all the requested logs
+    """
+    s3 = get_s3_client(unsigned=False)
+    if past_days:
+        days_ago = past_days if isinstance(past_days, datetime) else\
+            ((datetime.utcnow() - timedelta(days=past_days)).replace(
+                tzinfo=timezone.utc) if isinstance(past_days, int) else None)
+    else:
+        days_ago = None
+    tree = get_s3_file_tree(s3, 'cwc-hms', 'bob_ec2_logs', days_ago)
     keys = tree.gets('key')
     # Here we only get the tar.gz files which contain the logs for the
     # facilitator
