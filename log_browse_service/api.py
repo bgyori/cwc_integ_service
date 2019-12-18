@@ -12,6 +12,11 @@ app = Flask(__name__)
 HERE = path.abspath(path.dirname(__file__))
 LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')
 LOGS = path.join(HERE, 'templates', LOGS_DIR_NAME)
+if not path.isdir(LOGS):
+    raise ValueError('%s is not a directory. Must either set "CWC_LOG_DIR" in '
+                     'os environment or have the default log directory'
+                     '"logs" available in the templates directory.' %
+                     path.join('templates', LOGS_DIR_NAME))
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
 GLOBAL_PRELOAD = True
 time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
