@@ -12,13 +12,18 @@ logger = logging.getLogger('log_processor')
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 IMG_DIRNAME = 'images'
+SESS_ID_MARK = '__SESS_ID_MARKER__'
+YMD_DT = '%Y-%m-%d-%H-%M-%S'
 
 
-def make_html(html_parts):
+def make_html(html_parts, sess_id):
     with open(os.path.join(THIS_DIR, 'page_template.html'), 'r') as fh:
         template = fh.read()
 
-    html = template.replace('%%%CONTENT%%%', '\n'.join(html_parts))
+    html = template.replace(
+        '%%%CONTENT%%%', '\n'.join(html_parts)).replace(
+        SESS_ID_MARK, sess_id
+    )
     return html
 
 
@@ -285,20 +290,21 @@ class CwcLog(object):
                    image=self.image_id, interface=self.interface)
         return textwrap.dedent(html)
 
-    def make_html(self):
+    def make_html(self, sess_id):
         html_parts = ['<div class="container">']
         html_parts.append(self.make_header())
 
         # Find all messages received by the BA
         for entry in self.get_io_entries():
-            html_part = entry.make_html()
+            html_part = entry.make_html(self.image_id)
             if html_part is not None:
                 html_parts.append(html_part)
         html_parts.append('</div>')
-        return make_html(html_parts)
+        return make_html(html_parts, sess_id)
 
 
-def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
+def export_logs(log_dir_path, sess_id, out_file=None, file_type='html',
+                use_cache=True):
     """Export the logs in log_dir_path into html or pdf.
 
     Parameters
@@ -306,6 +312,8 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     log_dir_path : str
         The path to the log directory which should contain log.txt and a
         directory called 'images'.
+    sess_id : str
+        The session id.
     out_file : str
         By default this will be a file 'transcript.html' or 'transcript.pdf' in
         the log_dir_path, depending on the file_type. If an out_file is
@@ -334,7 +342,7 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
 
     log = CwcLog(log_dir_path)
     if not use_cache or not os.path.exists(html_file):
-        html = log.make_html()
+        html = log.make_html(sess_id)
 
         with open(html_file, 'w') as fh:
             fh.write(html)
