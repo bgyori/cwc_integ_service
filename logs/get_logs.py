@@ -1,12 +1,11 @@
 import os
 import re
-
+import tqdm
 import boto3
 import docker
 import tarfile
-from datetime import datetime
-from io import BytesIO
-from indra.util.aws import get_s3_file_tree
+from datetime import datetime, timedelta, timezone
+from indra.util.aws import get_s3_file_tree, get_s3_client
 
 import logging
 logger = logging.getLogger('log-getter')
@@ -188,23 +187,30 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
             outpath = os.path.join(head_dir_path, 'log.txt')
             if cached and os.path.exists(outpath):
                 continue
-
+        tgz_file_name = key.split('/')[-1]
+        tgz_file = os.path.join(head_dir_path, tgz_file_name)
         res = s3.get_object(Bucket='cwc-hms', Key=key)
-        byte_stream = BytesIO(res['Body'].read())
-        with tarfile.open(None, 'r', fileobj=byte_stream) as tarf:
-            if resource_name == 'bioagent_images':
-                tarf.extractall(outpath)
-            else:
-                outpaths = tarf.getnames()
-                facls = [n for n in outpaths if n.endswith('facilitator.log')]
-                if not facls:
-                    print('No facilitator.log found for %s' % key)
-                    continue
-                facl = facls[0]
-                efo = tarf.extractfile(facl)
-                log_txt = efo.read().decode('utf-8')
-                with open(outpath, 'w') as fh:
-                    fh.write(log_txt)
+        # byte_stream = BytesIO(res['Body'].read())
+        byte_stream = res['Body'].read()
+        with open(tgz_file, 'wb') as tf:
+            tf.write(byte_stream)
+        # Re-open file
+        with open(tgz_file, 'rb') as file_byte_stream:
+            with tarfile.open(None, 'r', fileobj=file_byte_stream) as tarf:
+                if resource_name == 'bioagent_images':
+                    tarf.extractall(outpath)
+                else:
+                    outpaths = tarf.getnames()
+                    facls = [n for n in outpaths if
+                             n.endswith('facilitator.log')]
+                    if not facls:
+                        print('No facilitator.log found for %s' % key)
+                        continue
+                    facl = facls[0]
+                    efo = tarf.extractfile(facl)
+                    log_txt = efo.read().decode('utf-8')
+                    with open(outpath, 'w') as fh:
+                        fh.write(log_txt)
     return dir_set
 
 
