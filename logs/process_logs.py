@@ -408,7 +408,6 @@ def main():
         transcripts.append((time, out_file))
         # Merge tar.gz files to single archive
         archive_fname = path.join(log_dir, dirname + '_archive.tar.gz')
-        import ipdb; ipdb.set_trace()  # Check archive_fname
         if len([file for file in listdir(log_dir) if
                 file.endswith('.tar.gz')]) > 1:
             with tarfile.open(archive_fname, 'w|gz') as tarf:
