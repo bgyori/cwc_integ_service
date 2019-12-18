@@ -15,8 +15,8 @@ logger = logging.getLogger('log_processor')
 
 THIS_DIR = path.abspath(path.dirname(__file__))
 SERVICE_DIR = path.abspath(path.join(THIS_DIR,
-                                           path.pardir,
-                                           'log_browse_service'))
+                                     path.pardir,
+                                     'log_browse_service'))
 TEMPLATES_DIR = path.join(SERVICE_DIR, 'templates')
 STATIC_DIR = path.join(SERVICE_DIR, 'static')
 CSS_FILE = path.join(THIS_DIR, 'style.css')
@@ -124,7 +124,7 @@ class CwcLogEntry(object):
                 img_path_seg = img_path[img_path.index(IMG_DIRNAME):]
                 log_name = self.log_dir.split(path.sep)[-2]
                 img_loc = path.sep.join(['static', log_name,
-                                            SESS_ID_MARK, *img_path_seg])
+                                         SESS_ID_MARK, *img_path_seg])
 
             # Hardcode path to static folder:
             # /static/<name>/<sess_id>/images/<image.png>
@@ -304,12 +304,11 @@ class CwcLog(object):
         return textwrap.dedent(html)
 
     def make_html(self, sess_id):
-        html_parts = ['<div class="container">']
-        html_parts.append(self.make_header())
+        html_parts = ['<div class="container">', self.make_header()]
 
         # Find all messages received by the BA
         for entry in self.get_io_entries():
-            html_part = entry.make_html(self.image_id)
+            html_part = entry.make_html()
             if html_part is not None:
                 html_parts.append(html_part)
         html_parts.append('</div>')
@@ -396,7 +395,7 @@ def main():
     args = parser.parse_args()
     name = args.name
     loc = path.join(TEMPLATES_DIR, name)
-    overwrite = args.overwrite
+    overwrite = args.overwrite  # Todo control caching
     days_ago = args.days_old
 
     log_dirs = get_logs_from_s3(loc, past_days=days_ago)
@@ -425,7 +424,7 @@ def main():
 
                     static_path = [name, dirname, 'images']
                     dest_path = path.abspath(path.join(STATIC_DIR,
-                                                             *static_path))
+                                                       *static_path))
                     makedirs(dest_path, exist_ok=True)
                     copy2(source, path.join(dest_path, img_file_name))
     transcripts.sort()
