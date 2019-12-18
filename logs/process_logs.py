@@ -113,10 +113,14 @@ class CwcLogEntry(object):
                 img_loc = ""
             else:
                 img_path_seg = img_path[img_path.index(IMG_DIRNAME):]
-                img_loc = os.path.sep.join(img_path_seg)
-                img_loc = os.path.abspath(os.path.join(self.log_dir, img_loc))
-            inp = ('<img src=\"{img}\" alt=\"Image {img} Not Available\">'
-                   .format(img=img_loc))
+                log_name = self.log_dir.split(os.path.sep)[-2]
+                img_loc = os.path.sep.join(['static', log_name,
+                                            SESS_ID_MARK, *img_path_seg])
+
+            # Hardcode path to static folder:
+            # /static/<name>/<sess_id>/images/<image.png>
+            inp = ('<img src=\"/%s\" alt=\"Image '
+                   '/%s not available\">' % (img_loc, img_loc))
             img_type = cont.gets('type')
             if img_type == 'simulation' and self.partner == 'QCA':
                 img_type = 'path_diagram'
@@ -223,7 +227,7 @@ class CwcLog(object):
             self.interface = 'UNKNOWN'
 
         # Get the date out of the image name, if present.
-        # WARNING: This way of doing it will break in around 80 years.
+        # WARNING: This way of doing it will break around year 2088
         if '-20' in self.image_id:
             self.image_id = self.image_id.split('-')[0]
 
