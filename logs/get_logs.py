@@ -180,7 +180,7 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
         if folder:
             head_dir_path = os.path.join(folder, head_dir_path)
         if not os.path.exists(head_dir_path):
-            os.mkdir(head_dir_path)
+            os.makedirs(head_dir_path, exist_ok=True)
         if resource_name == 'bioagent_images':
             outpath = head_dir_path
         else:
