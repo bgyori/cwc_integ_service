@@ -119,10 +119,10 @@ def get_logs():
         master_logs.append(ses_name)
         log_arches.append(run_name)
         img_arches.append(img_name)
-    print("Found the following logs:")
-    print(master_logs)
-    print(log_arches)
-    print(img_arches)
+    logger.info("Found the following logs:")
+    logger.info(master_logs)
+    logger.info(log_arches)
+    logger.info(img_arches)
     return
 
 
@@ -157,12 +157,12 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
     keys = tree.gets('key')
     # Here we only get the tar.gz files which contain the logs for the
     # facilitator
-    print(len(keys))
-    print(len([k for k in keys if 'image' in k]))
+    logger.info('Total number of objects: %d ' % len(keys))
+    logger.info('Total number of images found: %d' %
+                len([k for k in keys if 'image' in k]))
     keys = [key for key in keys if key.startswith('bob_ec2_logs/')
             and key.endswith('.tar.gz')]
-    print(len(keys))
-    print('Found %d keys' % len(keys))
+    logger.info('Number of archives: %d' % len(keys))
 
     fname_patt = re.compile('([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).tar.gz')
     dir_set = set()
@@ -204,7 +204,7 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
                     facls = [n for n in outpaths if
                              n.endswith('facilitator.log')]
                     if not facls:
-                        print('No facilitator.log found for %s' % key)
+                        logger.info('No facilitator.log found for %s' % key)
                         continue
                     facl = facls[0]
                     efo = tarf.extractfile(facl)
