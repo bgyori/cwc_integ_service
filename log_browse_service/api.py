@@ -9,6 +9,7 @@ logger = logging.getLogger('cwc log browser api')
 
 app = Flask(__name__)
 
+
 HERE = path.abspath(path.dirname(__file__))
 LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')
 LOGS = path.join(HERE, 'templates', LOGS_DIR_NAME)
@@ -77,7 +78,8 @@ def browse():
 
 @app.route('/iframe_page/<sess_id>')
 def iframe_page(sess_id):
-    return render_template('/%s/%s/transcript.html' % (LOGS_DIR_NAME, sess_id))
+    return render_template('/%s/%s/transcript.html' %
+                           (LOGS_DIR_NAME, sess_id))
 
 
 @app.route('/')
