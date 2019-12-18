@@ -1,16 +1,25 @@
 import os
 import re
-import sys
 import json
+import logging
+import tarfile
+import argparse
 import textwrap
+from shutil import copy2
+from kqml import KQMLPerformative, KQMLException
 from datetime import datetime
 
-from kqml import *
+from get_logs import get_logs_from_s3
 
-import logging
 logger = logging.getLogger('log_processor')
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+SERVICE_DIR = os.path.abspath(os.path.join(THIS_DIR,
+                                           os.path.pardir,
+                                           'log_browse_service'))
+TEMPLATES_DIR = os.path.join(SERVICE_DIR, 'templates')
+STATIC_DIR = os.path.join(SERVICE_DIR, 'static')
+CSS_FILE = os.path.join(THIS_DIR, 'style.css')
 IMG_DIRNAME = 'images'
 SESS_ID_MARK = '__SESS_ID_MARKER__'
 YMD_DT = '%Y-%m-%d-%H-%M-%S'
@@ -365,22 +374,76 @@ def export_logs(log_dir_path, sess_id, out_file=None, file_type='html',
     return log, out_file
 
 
-if __name__ == '__main__':
-    loc = sys.argv[1]
-    from get_logs import get_logs_from_s3
-    log_dirs = get_logs_from_s3(loc)
+def main():
+    parser = argparse.ArgumentParser('Update the CWC Bob logs')
+    parser.add_argument('--name', default='logs',
+                        help='Name of directory to write logs to. Only '
+                             'provide a name, the full paths are '
+                             'automatically set by the script. '
+                             'Suggestion: set CWC_LOG_DIR first (e.g. '
+                             '`export CWC_LOG_DIR=\'logs\'` and then run '
+                             'this script like `python process_logs.py '
+                             '--name ${CWC_LOG_DIR}` + other optional '
+                             'arguments. Then when the flask app runs, it '
+                             'will use the same environement variable.')
+    parser.add_argument('--overwrite', action='store_true', default=False,
+                        help='If logs are already stored at the given '
+                             'name, overwrite the current logs there.')
+    parser.add_argument('--days-old', type=int,
+                        help='Provide the number of days back to retrieve '
+                             'the logs. If this option is not provided, '
+                             'all the logs will be downloaded.')
+    args = parser.parse_args()
+    name = args.name
+    loc = os.path.join(TEMPLATES_DIR, name)
+    overwrite = args.overwrite
+    days_ago = args.days_old
+
+    log_dirs = get_logs_from_s3(loc, past_days=days_ago)
     transcripts = []
     for dirname in log_dirs:
         log_dir = os.path.join(loc, dirname)
-        log, out_file = export_logs(log_dir)
+        log, out_file = export_logs(log_dir, dirname)
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
+        # Merge tar.gz files to single archive
+        archive_fname = os.path.join(log_dir, dirname + '_archive.tar.gz')
+        import ipdb; ipdb.set_trace()  # Check archive_fname
+        if len([file for file in os.listdir(log_dir) if
+                file.endswith('.tar.gz')]) > 1:
+            with tarfile.open(archive_fname, 'w|gz') as tarf:
+                for file in os.listdir(log_dir):
+                    if file.endswith('.tar.gz'):
+                        fpath = os.path.join(log_dir, file)
+                        tarf.add(fpath)
+        # Copy images to static directory
+        if os.path.isdir(os.path.join(log_dir, IMG_DIRNAME)):
+            for img_file in os.listdir(os.path.join(log_dir, IMG_DIRNAME)):
+                if img_file.endswith('.png'):
+                    img_file_name = img_file.split(os.path.sep)[-1]
+                    source = os.path.abspath(
+                        os.path.join(log_dir, IMG_DIRNAME, img_file))
+
+                    static_path = [name, dirname, 'images']
+                    dest_path = os.path.abspath(os.path.join(STATIC_DIR,
+                                                             *static_path))
+                    os.makedirs(dest_path, exist_ok=True)
+                    copy2(source, os.path.join(dest_path, img_file_name))
     transcripts.sort()
     json_fname = os.path.join(loc, 'transcripts.json')
-    with open(json_fname, 'w') as f:
-        json.dump([os.path.abspath(of) for _, of in transcripts], f, indent=1)
+    mode = 'a' if os.path.isfile(json_fname) else 'w'
+    with open(json_fname, mode) as f:
+        json.dump([[os.path.abspath(of), dt.strftime(YMD_DT)]
+                   for dt, of in transcripts], f, indent=1)
     with open(os.path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
-    html = html_template.replace('{{date}}', str(datetime.now()))
-    with open(os.path.join(loc, 'index.html'), 'w') as f:
+    html = html_template.replace('<<__DATE__>>',
+                                 str(datetime.utcnow().strftime(YMD_DT)))
+    with open(os.path.join(loc, 'log_view.html'), 'w') as f:
         f.write(html)
+    dest = os.path.join(loc, 'style.css')
+    copy2(CSS_FILE, dest)
+
+
+if __name__ == '__main__':
+    main()
