@@ -1,5 +1,6 @@
 import re
 import logging
+import os
 from os import path, listdir
 from datetime import datetime
 from flask import Flask, render_template, request, url_for
@@ -9,7 +10,7 @@ logger = logging.getLogger('cwc log browser api')
 app = Flask(__name__)
 
 HERE = path.abspath(path.dirname(__file__))
-LOGS_DIR_NAME = 'logs_20191216'
+LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')
 LOGS = path.join(HERE, 'templates', LOGS_DIR_NAME)
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
 GLOBAL_PRELOAD = True
