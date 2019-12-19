@@ -413,7 +413,7 @@ def main():
                 for file in listdir(log_dir):
                     if file.endswith('.tar.gz'):
                         fpath = path.join(log_dir, file)
-                        tarf.add(fpath)
+                        tarf.add(fpath, arcname=file)
         # Copy images to static directory
         if path.isdir(path.join(log_dir, IMG_DIRNAME)):
             for img_file in listdir(path.join(log_dir, IMG_DIRNAME)):
