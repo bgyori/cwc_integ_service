@@ -19,6 +19,7 @@ SERVICE_DIR = path.abspath(path.join(THIS_DIR,
                                      'log_browse_service'))
 TEMPLATES_DIR = path.join(SERVICE_DIR, 'templates')
 STATIC_DIR = path.join(SERVICE_DIR, 'static')
+ARCHIVES = path.join(SERVICE_DIR, '_archive')
 CSS_FILE = path.join(THIS_DIR, 'style.css')
 IMG_DIRNAME = 'images'
 SESS_ID_MARK = '__SESS_ID_MARKER__'
@@ -406,7 +407,7 @@ def main():
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
         # Merge tar.gz files to single archive
-        archive_fname = path.join(log_dir, dirname + '_archive.tar.gz')
+        archive_fname = path.join(ARCHIVES, dirname + '_archive.tar.gz')
         if len([file for file in listdir(log_dir) if
                 file.endswith('.tar.gz')]) > 1:
             with tarfile.open(archive_fname, 'w|gz') as tarf:
