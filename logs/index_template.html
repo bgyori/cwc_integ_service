@@ -43,8 +43,9 @@
         let sess_id = transcript_list[new_idx];
         console.log(`sess_id=${sess_id}`);
         curr_idx = new_idx;
-        document.getElementById("page-count").textContent = `Current page: ${new_idx} of ${transcript_list.length-1}`;
-        document.getElementById("frame").src = `iframe_page/${sess_id}`;
+        document.getElementById('page-count').textContent = `Current page: ${new_idx} of ${transcript_list.length-1}`;
+        document.getElementById('download-link').href = `/files/${sess_id}`;
+        document.getElementById('frame').src = `iframe_page/${sess_id}`;
       }
     </script>
   </head>
@@ -53,6 +54,7 @@
       <h2>Transcript Browser</h2>
       <p>Last updated <<__DATE__>></p>
       <p id="page-count">Current page: {{ page }}</p>
+      <p>The logs for this page are available for <a id="download-link" href="">download</a></p>
     </div>
     <div class="buttons" align="center">
       <button class="previous" type="button" onclick="moveToPage(0)">
