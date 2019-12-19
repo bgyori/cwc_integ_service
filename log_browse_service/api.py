@@ -3,7 +3,8 @@ import logging
 import os
 from os import path, listdir
 from datetime import datetime
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for,\
+    send_from_directory
 
 logger = logging.getLogger('cwc log browser api')
 
@@ -19,6 +20,7 @@ if not path.isdir(LOGS):
                      '"logs" available in the templates directory.' %
                      path.join('templates', LOGS_DIR_NAME))
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
+ARCHIVES = path.join(HERE, '_archive')
 GLOBAL_PRELOAD = True
 time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
 sortable_date_format = '%Y-%m-%d-%H-%M-%S'
@@ -82,12 +84,20 @@ def iframe_page(sess_id):
                            (LOGS_DIR_NAME, sess_id))
 
 
+@app.route('/files/<sess_id>')
+def download_file(sess_id):
+    archive_fname = sess_id + '_archive.tar.gz'
+    return send_from_directory(directory=ARCHIVES,
+                               filename=archive_fname,
+                               as_attachment=True)
+
+
 @app.route('/')
 @app.route('/index')
 def index():
-    # This route should list all the session ids with the user(s?), time
-    # and date. Clicking on one of them should link to the index page and
-    # set curr_idx to the corresponding
+    # This route should list all the session ids with the user (if
+    # available), time and date. Clicking on one of them should link to
+    # the index page and set curr_idx to the corresponding page
     update_session_list()
     return render_template('browse_index.html',
                            sess_id_list=session_list_cache)
