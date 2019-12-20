@@ -2,6 +2,7 @@ import os
 import re
 import json
 import logging
+from shutil import copy2
 from functools import wraps
 from os import path, listdir
 from datetime import datetime, timedelta
@@ -17,8 +18,24 @@ logger.info('Testing info logging')
 logger.warning('Testing warning logging')
 logger.error('Testing error logging')
 
+HERE = path.abspath(path.dirname(__file__))
+DEFAULT_STATIC = path.join(HERE, 'static')
+DEFAULT_TEMPLATES = path.join(HERE, 'templates')
+LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')  # fixme Set default to
+# where api is
+STATIC_DIR = path.join(LOGS_DIR_NAME, 'static')
+TEMPLATS_DIR = path.join(LOGS_DIR_NAME, 'templates')
+if not path.isfile(path.join(TEMPLATS_DIR, 'browse_index.html')):
+    src = path.join(DEFAULT_TEMPLATES, 'browse_index.html')
+    dst = path.join(TEMPLATS_DIR, 'browse_index.html')
+    copy2(src=src, dst=dst)
+if not path.isfile(path.join(TEMPLATS_DIR, 'login.html')):
+    src = path.join(DEFAULT_TEMPLATES, 'login.html')
+    dst = path.join(TEMPLATS_DIR, 'login.html')
+    copy2(src=src, dst=dst)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=STATIC_DIR,
+            template_folder=TEMPLATS_DIR)
 app.config['DEBUG'] = 1
 app.config['SECRET_KEY'] = os.environ.get('LOG_BROWSER_SESSION_KEY', '')
 if not app.config.get('SECRET_KEY'):
@@ -28,14 +45,12 @@ if not app.config.get('SECRET_KEY'):
 if not path.isfile(HASH_PASS_FPATH):
     raise ValueError('Need to save password hash to %s' % HASH_PASS_FPATH)
 
-HERE = path.abspath(path.dirname(__file__))
-LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')
-LOGS = path.join(HERE, 'templates', LOGS_DIR_NAME)
+LOGS = TEMPLATS_DIR
 if not path.isdir(LOGS):
     raise ValueError('%s is not a directory. Must either set "CWC_LOG_DIR" '
                      'in os environment or have the default log directory '
                      '"logs" available in the templates directory.' %
-                     path.join('templates', LOGS_DIR_NAME))
+                     TEMPLATS_DIR)
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
 ARCHIVES = path.join(HERE, '_archive')
 GLOBAL_PRELOAD = True
@@ -118,7 +133,7 @@ def browse():
     # (default) or the provided page number (zero-indexed)
     page = request.args.get('page', 0)
     session['last_page'] = '/browse?page=%s' % page
-    return render_template('/%s/log_view.html' % LOGS_DIR_NAME,
+    return render_template('log_view.html',
                            transcript_json=[
                                t[0] for t in
                                session['session_id_list_cache']],
@@ -130,8 +145,7 @@ def browse():
 @page_wrapper
 def iframe_page(sess_id):
     logger.info('Rendering iframe html')
-    return render_template('/%s/%s/transcript.html' %
-                           (LOGS_DIR_NAME, sess_id))
+    return render_template('%s/transcript.html' % sess_id)
 
 
 @app.route('/files/<sess_id>')
