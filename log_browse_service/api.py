@@ -21,8 +21,11 @@ logger.error('Testing error logging')
 HERE = path.abspath(path.dirname(__file__))
 DEFAULT_STATIC = path.join(HERE, 'static')
 DEFAULT_TEMPLATES = path.join(HERE, 'templates')
-LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')  # fixme Set default to
-# where api is
+LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', '')
+if not LOGS_DIR_NAME:
+    logger.info('Environment variable "CWC_LOG_DIR" not set, using default: '
+                '%s' % HERE)
+    LOGS_DIR_NAME = HERE
 STATIC_DIR = path.join(LOGS_DIR_NAME, 'static')
 TEMPLATS_DIR = path.join(LOGS_DIR_NAME, 'templates')
 if not path.isfile(path.join(TEMPLATS_DIR, 'browse_index.html')):
