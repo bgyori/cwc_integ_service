@@ -8,7 +8,7 @@ from os import path, listdir
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, url_for,\
     send_from_directory, session, redirect, Response
-from .util import verify_password, HASH_PASS_FPATH
+from log_browse_service.util import verify_password, HASH_PASS_FPATH
 
 # Make logging print even for just .info and .warning
 logging.basicConfig(level=logging.DEBUG)
@@ -210,3 +210,6 @@ def check_login():
         code = 401
     return Response(json.dumps(response_json), status=code,
                     mimetype='application/json')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port='8888')
