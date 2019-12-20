@@ -19,8 +19,14 @@ SERVICE_DIR = path.abspath(path.join(THIS_DIR,
                                      path.pardir,
                                      'log_browse_service'))
 CWC_LOG_DIR = os.environ.get('CWC_LOG_DIR')
-STATIC_DIR = path.join(CWC_LOG_DIR, 'static')
-TEMPLATS_DIR = path.join(CWC_LOG_DIR, 'templates')
+STATIC_DIR = path.join(CWC_LOG_DIR, 'static') if CWC_LOG_DIR else path.join(
+    SERVICE_DIR, 'static')
+TEMPLATS_DIR = path.join(CWC_LOG_DIR, 'templates') if CWC_LOG_DIR else \
+    path.join(SERVICE_DIR, 'templates')
+if not CWC_LOG_DIR:
+    logger.info('Environment variable "CWC_LOG_DIR" not set, using default '
+                'paths for templates and processed logs: '
+                '%s' % TEMPLATS_DIR)
 ARCHIVES = path.join(SERVICE_DIR, '_archive')
 CSS_FILE = path.join(THIS_DIR, 'style.css')
 IMG_DIRNAME = 'images'
