@@ -9,7 +9,14 @@ from flask import Flask, render_template, request, url_for,\
     send_from_directory, session, redirect, Response
 from .util import verify_password, HASH_PASS_FPATH
 
+# Make logging print even for just .info and .warning
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('cwc log browser api')
+
+logger.info('Testing info logging')
+logger.warning('Testing warning logging')
+logger.error('Testing error logging')
+
 
 app = Flask(__name__)
 app.config['DEBUG'] = 1
@@ -25,8 +32,8 @@ HERE = path.abspath(path.dirname(__file__))
 LOGS_DIR_NAME = os.environ.get('CWC_LOG_DIR', 'logs')
 LOGS = path.join(HERE, 'templates', LOGS_DIR_NAME)
 if not path.isdir(LOGS):
-    raise ValueError('%s is not a directory. Must either set "CWC_LOG_DIR" in '
-                     'os environment or have the default log directory'
+    raise ValueError('%s is not a directory. Must either set "CWC_LOG_DIR" '
+                     'in os environment or have the default log directory '
                      '"logs" available in the templates directory.' %
                      path.join('templates', LOGS_DIR_NAME))
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
