@@ -17,17 +17,15 @@
         dataType: 'json',
         contentType: 'application/json',
         data: JSON.stringify(json),
-        complete: responseHandling(data, status)
+        complete: function (data, status) {
+          console.log(`Got response status: ${status}`);
+          console.log(data);
+          if (data.responseJSON && data.responseJSON.redirect) {
+            console.log(`Got redirect to ${data.responseJSON.redirect}`);
+            window.location.replace(data.responseJSON.redirect);
+          }
+        }
       })
-    }
-
-    function responseHandling(data, status) {
-      console.log(`Got response status: ${status}`);
-      console.log(data);
-      if (data.responseJSON && data.responseJSON.redirect) {
-        console.log(`Got redirect to ${data.responseJSON.redirect}`);
-        window.location.replace(data.responseJSON.redirect);
-      }
     }
 
     function doLogin() {
