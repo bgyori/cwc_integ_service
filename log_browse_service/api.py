@@ -135,6 +135,7 @@ def browse():
     # This route should render "index_template" showing the first log
     # (default) or the provided page number (zero-indexed)
     page = request.args.get('page', 0)
+    update_session_id_list()
     session['last_page'] = '/browse?page=%s' % page
     return render_template('log_view.html',
                            transcript_json=[
