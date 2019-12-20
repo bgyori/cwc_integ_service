@@ -399,7 +399,7 @@ def main():
     overwrite = args.overwrite  # Todo control caching
     days_ago = args.days_old
     if not path.isdir(ARCHIVES):
-        makedirs(ARCHIVES)
+        makedirs(ARCHIVES, exist_ok=True)
 
     log_dirs = get_logs_from_s3(loc, past_days=days_ago)
     transcripts = []
