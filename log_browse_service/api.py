@@ -74,6 +74,30 @@ def update_session_id_list():
     session['session_id_list_cache'] = session_id_list_cache
 
 
+def page_wrapper(f):
+    logger.info('Calling outer wrapper')
+
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        # Check if logged in in session:
+        #   if not: redirect to /login
+        #   if logged in: continue to page
+
+        # Not logged in
+        if not session.get('logged_in', False):
+            if 'iframe' in request.path:
+                logger.info('Unauthorized iframe request, letting user know '
+                            'they need to log in')
+                return 'Must log in to continue browsing log pages'
+            logger.info('User is not logged in, redirecting to login')
+            return redirect(url_for('login'))
+
+        # Logged in: proceed
+        logger.info('User is logged in, proceeding')
+        return f(*args, **kwargs)
+    return decorator
+
+
 @app.before_first_request
 def session_set_up():
     update_session_id_list()
@@ -88,25 +112,32 @@ def session_expiration_check():
 
 
 @app.route('/browse')
+@page_wrapper
 def browse():
     # This route should render "index_template" showing the first log
     # (default) or the provided page number (zero-indexed)
     page = request.args.get('page', 0)
+    session['last_page'] = '/browse?page=%s' % page
     return render_template('/%s/log_view.html' % LOGS_DIR_NAME,
-                           transcript_json=[t[0] for t in
-                                            session['session_id_list_cache']],
+                           transcript_json=[
+                               t[0] for t in
+                               session['session_id_list_cache']],
                            page=page,
                            base_url=url_for('browse'))
 
 
 @app.route('/iframe_page/<sess_id>')
+@page_wrapper
 def iframe_page(sess_id):
+    logger.info('Rendering iframe html')
     return render_template('/%s/%s/transcript.html' %
                            (LOGS_DIR_NAME, sess_id))
 
 
 @app.route('/files/<sess_id>')
+@page_wrapper
 def download_file(sess_id):
+    logger.info('File download request received')
     archive_fname = sess_id + '_archive.tar.gz'
     return send_from_directory(directory=ARCHIVES,
                                filename=archive_fname,
@@ -115,11 +146,13 @@ def download_file(sess_id):
 
 @app.route('/')
 @app.route('/index')
+@page_wrapper
 def index():
     # This route should list all the session ids with the user (if
     # available), time and date. Clicking on one of them should link to
     # the index page and set curr_idx to the corresponding page
     update_session_id_list()
+    session['last_page'] = '/index'
     return render_template('browse_index.html',
                            sess_id_list=session['session_id_list_cache'])
 
@@ -159,20 +192,3 @@ def check_login():
         code = 401
     return Response(json.dumps(response_json), status=code,
                     mimetype='application/json')
-
-
-def _wrapper(f):
-    logger.info('Calling outer wrapper')
-
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        # Check if logged in in session:
-        #   if not: redirect to /login
-        #   if logged in: continue to page
-
-        # Not logged in
-        if not session.get('logged_in', False):
-            return redirect(url_for('login'))
-
-        # Logged in: proceed
-        return f(*args, **kwargs)
