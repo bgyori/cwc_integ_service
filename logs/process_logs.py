@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import logging
@@ -17,8 +18,9 @@ THIS_DIR = path.abspath(path.dirname(__file__))
 SERVICE_DIR = path.abspath(path.join(THIS_DIR,
                                      path.pardir,
                                      'log_browse_service'))
-TEMPLATES_DIR = path.join(SERVICE_DIR, 'templates')
-STATIC_DIR = path.join(SERVICE_DIR, 'static')
+CWC_LOG_DIR = os.environ.get('CWC_LOG_DIR')
+STATIC_DIR = path.join(CWC_LOG_DIR, 'static')
+TEMPLATS_DIR = path.join(CWC_LOG_DIR, 'templates')
 ARCHIVES = path.join(SERVICE_DIR, '_archive')
 CSS_FILE = path.join(THIS_DIR, 'style.css')
 IMG_DIRNAME = 'images'
@@ -124,7 +126,7 @@ class CwcLogEntry(object):
             else:
                 img_path_seg = img_path[img_path.index(IMG_DIRNAME):]
                 log_name = self.log_dir.split(path.sep)[-2]
-                img_loc = path.sep.join(['static', log_name,
+                img_loc = path.sep.join(['static',
                                          SESS_ID_MARK, *img_path_seg])
 
             # Hardcode path to static folder:
@@ -394,8 +396,8 @@ def main():
                              'the logs. If this option is not provided, '
                              'all the logs will be downloaded.')
     args = parser.parse_args()
-    name = args.name
-    loc = path.join(TEMPLATES_DIR, name)
+    CWC_LOG_DIR = args.name
+    loc = TEMPLATS_DIR
     overwrite = args.overwrite  # Todo control caching
     days_ago = args.days_old
     if not path.isdir(ARCHIVES):
@@ -424,10 +426,9 @@ def main():
                     img_file_name = img_file.split(path.sep)[-1]
                     source = path.abspath(
                         path.join(log_dir, IMG_DIRNAME, img_file))
-
-                    static_path = [name, dirname, 'images']
+                    static_path = dirname + '/images'
                     dest_path = path.abspath(path.join(STATIC_DIR,
-                                                       *static_path))
+                                                       static_path))
                     makedirs(dest_path, exist_ok=True)
                     copy2(source, path.join(dest_path, img_file_name))
     transcripts.sort()
@@ -442,7 +443,7 @@ def main():
                                  str(datetime.utcnow().strftime(YMD_DT)))
     with open(path.join(loc, 'log_view.html'), 'w') as f:
         f.write(html)
-    dest = path.join(loc, 'style.css')
+    dest = path.join(STATIC_DIR, 'style.css')
     copy2(CSS_FILE, dest)
 
 
