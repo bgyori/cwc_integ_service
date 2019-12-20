@@ -398,6 +398,8 @@ def main():
     loc = path.join(TEMPLATES_DIR, name)
     overwrite = args.overwrite  # Todo control caching
     days_ago = args.days_old
+    if not path.isdir(ARCHIVES):
+        makedirs(ARCHIVES)
 
     log_dirs = get_logs_from_s3(loc, past_days=days_ago)
     transcripts = []
