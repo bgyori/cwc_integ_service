@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+    <!-- JS libraries -->
+    <!-- JQ -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+</head>
+<body>
+  <script>
+    let login_post_url = '{{ url_for('check_login') }}';
+    function postAuth(json) {
+      $.ajax({
+        url: login_post_url,
+        type: 'POST',
+        dataType: 'json',
+        contentType: 'application/json',
+        data: JSON.stringify(json),
+        complete: responseHandling(data, status)
+      })
+    }
+
+    function responseHandling(data, status) {
+      console.log(`Got response status: ${status}`);
+      console.log(data);
+      if (data.responseJSON && data.responseJSON.redirect) {
+        console.log(`Got redirect to ${data.responseJSON.redirect}`);
+        window.location.replace(data.responseJSON.redirect);
+      }
+    }
+
+    function doLogin() {
+      console.log('Running doLogin');
+      let json_dict = {
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value
+      };
+      return postAuth(json_dict);
+    }
+  </script>
+  <div class="container">
+    <form action="javascript: doLogin();">
+      Username:<br>
+      <input id="username" type="text" name="username" autocomplete="off"><br>
+      Password:<br>
+      <input id="password" type="password" name="password" autocomplete="off"><br><br>
+      <input type="submit">
+    </form>
+  </div>
+</body>
+</html>
