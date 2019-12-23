@@ -350,15 +350,16 @@ class CwcLog(object):
         return self.io_entries
 
     def make_header(self):
+        user = get_user_for_session(cont_name=self.container_name)
         html = """
         <div class="row start_time">
           <div class="col-sm">
             Dialogue running {container} container with image {image} using
-            the {interface} interface started at: {start}
+            the {interface} interface started at: {start}. User is {user}.
           </div>
         </div>
         """.format(start=self.get_start_time(), container=self.container_name,
-                   image=self.image_id, interface=self.interface)
+                   image=self.image_id, interface=self.interface, user=user)
         return textwrap.dedent(html)
 
     def make_html(self, sess_id):
