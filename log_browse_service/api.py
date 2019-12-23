@@ -88,7 +88,7 @@ def update_session_id_list():
         else:
             logger.warning('session %s does not have any html formatted '
                            'log transcript.' % sess_id)
-    session_id_list_cache.sort(key=lambda t: t[1])
+    session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
     session['session_id_list_cache'] = session_id_list_cache
 
 
