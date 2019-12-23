@@ -8,7 +8,8 @@ from flask import Flask, render_template, request
 from flask_wtf import Form
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
-from wtforms import SubmitField
+from wtforms import SubmitField, StringField, validators
+from wtforms.fields.html5 import EmailField
 
 from logs.get_logs import get_logs_for_container
 
@@ -235,10 +236,14 @@ def _launch_app(interface_port_num, app_name, extension=''):
 
 
 class ClicForm(Form):
+    user_name = StringField('Name or identifier', validators=[validators.unicode_literals])
+    user_email = EmailField('contact email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with CLiC')
 
 
 class SbgnForm(Form):
+    user_name = StringField('Name or identifier', validators=[validators.unicode_literals])
+    user_email = EmailField('contact email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with SBGN')
 
 
