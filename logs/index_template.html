@@ -36,8 +36,12 @@
       let transcript_list = {{ transcript_json|safe }}
       function moveToPage(new_idx) {
         // Go to the indicated value.
-        if (new_idx < 0 || new_idx >= transcript_list.length) {
-          return;
+        if (new_idx < 0) {
+          // If too low, reset to 0
+          new_idx = 0;
+        } else if (new_idx >= transcript_list.length) {
+          // If too high, reset to max
+          new_idx = transcript_list.length-1;
         }
         console.log(`new_idx=${new_idx}`);
         let sess_id = transcript_list[new_idx];
