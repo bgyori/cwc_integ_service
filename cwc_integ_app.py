@@ -205,6 +205,19 @@ def has_token(token):
     return False
 
 
+def user_session_association(user, email, cont_id, cont_name, app_name,
+                             extension, port, interface_port_number):
+    mongo.db.session_users.insert_one({'user': user,
+                                       'email': email,
+                                       'container_id': cont_id,
+                                       'container_name': cont_name,
+                                       'app_name': app_name,
+                                       'extension': extension,
+                                       'port': port,
+                                       'interface_port':
+                                           interface_port_number})
+
+
 def _launch_app(interface_port_num, app_name, extension=''):
     num_sessions = get_num_sessions()
     if num_sessions >= MAX_SESSIONS:
