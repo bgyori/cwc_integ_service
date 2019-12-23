@@ -219,6 +219,12 @@ def user_session_association(user, email, cont_id, cont_name, app_name,
 
 
 def _launch_app(interface_port_num, app_name, extension=''):
+    user = request.form.get('user_name', '')
+    email = request.form.get('user_email', '')
+    if user or email:
+        logger.info('User %s with email %s launched app' %
+                    (user if user else '(username not provided)',
+                     email if email else '(no email)'))
     num_sessions = get_num_sessions()
     if num_sessions >= MAX_SESSIONS:
         logger.info('Number of sessions: %d' % num_sessions)
@@ -241,6 +247,9 @@ def _launch_app(interface_port_num, app_name, extension=''):
     host = base_host + (':%d' % port + extension)
     logger.info('Will redirect to address: %s' % host)
     cont_id, cont_name = _run_container(port, interface_port_num, app_name)
+    if user or email:
+        user_session_association(user, email, cont_id, cont_name, app_name,
+                                 extension, port, interface_port_num)
     logger.info('Start redirecting %s interface.' % app_name)
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
