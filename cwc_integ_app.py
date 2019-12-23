@@ -258,13 +258,13 @@ def _launch_app(interface_port_num, app_name, extension=''):
 
 
 class ClicForm(Form):
-    user_name = StringField('Name or identifier', validators=[validators.unicode_literals])
+    user_name = StringField('Name', validators=[validators.unicode_literals])
     user_email = EmailField('contact email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with CLiC')
 
 
 class SbgnForm(Form):
-    user_name = StringField('Name or identifier', validators=[validators.unicode_literals])
+    user_name = StringField('Name', validators=[validators.unicode_literals])
     user_email = EmailField('contact email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with SBGN')
 
