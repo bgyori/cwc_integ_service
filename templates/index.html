@@ -64,6 +64,8 @@
          role="form">
           {{ clic_form.hidden_tag() }}
           {{ wtf.form_errors(clic_form, hiddens="only") }}
+          {{ wtf.form_field(clic_form.user_name) }}
+          {{ wtf.form_field(clic_form.user_email) }}
           {{ wtf.form_field(clic_form.submit_button, class="btn btn-primary") }}
         </form>
         </div>
@@ -80,6 +82,8 @@
          role="form">
           {{ sbgn_form.hidden_tag() }}
           {{ wtf.form_errors(sbgn_form, hiddens="only") }}
+          {{ wtf.form_field(sbgn_form.user_name) }}
+          {{ wtf.form_field(sbgn_form.user_email) }}
           {{ wtf.form_field(sbgn_form.submit_button, class="btn btn-primary") }}
         </form>
         </div>
