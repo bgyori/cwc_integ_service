@@ -9,10 +9,59 @@ from os import path, listdir, makedirs
 from shutil import copy2
 from kqml import KQMLPerformative, KQMLException
 from datetime import datetime
+from pymongo import MongoClient
 
 from get_logs import get_logs_from_s3
 
 logger = logging.getLogger('log_processor')
+
+MONGO_URI = 'mongodb://localhost:27017/myDatabase'
+db = MongoClient(MONGO_URI).get_database('myDatabase')
+
+
+def _get_sessions_by_cont_name(cont_name):
+    matching_sessions = []
+    sessions = db.session_users.find()
+    if sessions is None:
+        return []
+    for sess in sessions:
+        if cont_name == sess['container_name']:
+            matching_sessions.append(sess)
+    return matching_sessions
+
+
+def _get_sessions_by_cont_id(cont_id):
+    matching_sessions = []
+    sessions = db.session_users.find()
+    if sessions is None:
+        return []
+    for sess in sessions:
+        if cont_id == sess['container_id']:
+            matching_sessions.append(sess)
+    return matching_sessions
+
+
+def get_sess_by_cont_name_id(cont_name, cont_id):
+    matching_sessions = []
+    id_sessions = _get_sessions_by_cont_id(cont_id)
+    for id_sess in id_sessions:
+        if cont_name == id_sess['container_name']:
+            matching_sessions.append(id_sess)
+    return matching_sessions
+
+
+def get_user_for_session(cont_name=None, cont_id=None):
+    matching_user = ''
+    if cont_id is None and cont_name is None:
+        raise ValueError('either cont_id or cont_name must be provided')
+    sessions = _get_sessions_by_cont_name(cont_name) if cont_name else\
+        (_get_sessions_by_cont_id(cont_id) if cont_id else [])
+    for session in sessions:
+        if cont_name and session['container_name'] == cont_name or\
+                cont_id and session['container_id'] == cont_id:
+            matching_user = session['user']
+    return matching_user if matching_user else 'anonymous'
+
 
 THIS_DIR = path.abspath(path.dirname(__file__))
 SERVICE_DIR = path.abspath(path.join(THIS_DIR,
