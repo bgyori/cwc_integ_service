@@ -3,3 +3,5 @@ flask-wtf
 flask-pymongo
 flask-bootstrap
 docker
+pymongo
+wtforms
