@@ -46,18 +46,29 @@ def get_session_logs(cont):
     return fname
 
 
-def get_bioagent_images(cont):
+def get_folder_gz(cont, path, arch_name):
     try:
-        bts, meta = cont.get_archive(
-            '/sw/cwc-integ/hms/bioagents/bioagents/images'
-            )
+        bts, meta = cont.get_archive(path)
     except Exception as e:
-        logger.warning("Failed to get images from the bioagents.")
+        logger.warning('Failed to get files from %s.' % path)
         return None
-    arch_name = '%s_bioagent_images.tar.gz' % make_cont_name(cont)
     with open(arch_name, 'wb') as f:
         for bit in bts:
             f.write(bit)
+    return arch_name
+
+
+def get_ba_session_data(cont):
+    arch_name = get_folder_gz(cont,
+        '/sw/cwc-integ/clic/session-data',
+        '%s_ba_session_data.tar.gz' % make_cont_name(cont))
+    return arch_name
+
+
+def get_bioagent_images(cont):
+    arch_name = get_folder_gz(cont,
+        '/sw/cwc-integ/hms/bioagents/bioagents/images',
+        '%s_bioagent_images.tar.gz' % make_cont_name(cont))
     return arch_name
 
 
@@ -76,7 +87,8 @@ def make_cont_name(cont):
 
 
 def get_logs_for_container(cont, interface):
-    tasks = [get_session_logs, get_run_logs, get_bioagent_images]
+    tasks = [get_session_logs, get_run_logs, get_bioagent_images,
+             get_ba_session_data]
     fnames = []
     for task in tasks:
         # Get the logs.
