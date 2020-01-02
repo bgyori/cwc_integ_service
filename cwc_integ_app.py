@@ -248,6 +248,7 @@ def _launch_app(interface_port_num, app_name, extension=''):
     logger.info('Will redirect to address: %s' % host)
     cont_id, cont_name = _run_container(port, interface_port_num, app_name)
     if user or email:
+        logger.info('Adding user info for user %s' % user)
         user_session_association(user, email, cont_id, cont_name, app_name,
                                  extension, port, interface_port_num)
     logger.info('Start redirecting %s interface.' % app_name)
