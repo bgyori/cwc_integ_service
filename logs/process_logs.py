@@ -1,24 +1,47 @@
 import os
 import re
-import sys
 import json
+import logging
+import tarfile
+import argparse
 import textwrap
+from os import path, listdir, makedirs
+from shutil import copy2
+from kqml import KQMLPerformative, KQMLException
 from datetime import datetime
 
-from kqml import *
+from get_logs import get_logs_from_s3
 
-import logging
 logger = logging.getLogger('log_processor')
 
-THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+THIS_DIR = path.abspath(path.dirname(__file__))
+SERVICE_DIR = path.abspath(path.join(THIS_DIR,
+                                     path.pardir,
+                                     'log_browse_service'))
+CWC_LOG_DIR = os.environ.get('CWC_LOG_DIR')
+STATIC_DIR = path.join(CWC_LOG_DIR, 'static') if CWC_LOG_DIR else path.join(
+    SERVICE_DIR, 'static')
+TEMPLATS_DIR = path.join(CWC_LOG_DIR, 'templates') if CWC_LOG_DIR else \
+    path.join(SERVICE_DIR, 'templates')
+if not CWC_LOG_DIR:
+    logger.info('Environment variable "CWC_LOG_DIR" not set, using default '
+                'paths for templates and processed logs: '
+                '%s' % TEMPLATS_DIR)
+ARCHIVES = path.join(SERVICE_DIR, '_archive')
+CSS_FILE = path.join(THIS_DIR, 'style.css')
 IMG_DIRNAME = 'images'
+SESS_ID_MARK = '__SESS_ID_MARKER__'
+YMD_DT = '%Y-%m-%d-%H-%M-%S'
 
 
-def make_html(html_parts):
-    with open(os.path.join(THIS_DIR, 'page_template.html'), 'r') as fh:
+def make_html(html_parts, sess_id):
+    with open(path.join(THIS_DIR, 'page_template.html'), 'r') as fh:
         template = fh.read()
 
-    html = template.replace('%%%CONTENT%%%', '\n'.join(html_parts))
+    html = template.replace(
+        '%%%CONTENT%%%', '\n'.join(html_parts)).replace(
+        SESS_ID_MARK, sess_id
+    )
     return html
 
 
@@ -101,17 +124,21 @@ class CwcLogEntry(object):
             msg_sm = 'prov_html'
         elif self.is_sem('display_image'):
             print("SYS sent image: %s" % cont.gets('path'))
-            img_path = cont.gets('path').split(os.path.sep)
+            img_path = cont.gets('path').split(path.sep)
             if IMG_DIRNAME not in img_path:
                 logger.warning("Image not shown: its path lacks correct "
                                "structure: %s" % img_path)
                 img_loc = ""
             else:
                 img_path_seg = img_path[img_path.index(IMG_DIRNAME):]
-                img_loc = os.path.sep.join(img_path_seg)
-                img_loc = os.path.abspath(os.path.join(self.log_dir, img_loc))
-            inp = ('<img src=\"{img}\" alt=\"Image {img} Not Available\">'
-                   .format(img=img_loc))
+                log_name = self.log_dir.split(path.sep)[-2]
+                img_loc = path.sep.join(['static',
+                                         SESS_ID_MARK, *img_path_seg])
+
+            # Hardcode path to static folder:
+            # /static/<name>/<sess_id>/images/<image.png>
+            inp = ('<img src=\"/%s\" alt=\"Image '
+                   '/%s not available\">' % (img_loc, img_loc))
             img_type = cont.gets('type')
             if img_type == 'simulation' and self.partner == 'QCA':
                 img_type = 'path_diagram'
@@ -194,13 +221,13 @@ class CwcLog(object):
         self.log_dir = log_dir
 
         # Load and parse the log file.
-        self.log_file = os.path.join(log_dir, 'log.txt')
+        self.log_file = path.join(log_dir, 'log.txt')
         with open(self.log_file, 'r') as f:
             self.__log = f.read()
         self.start_time = None
 
         # Parse out information regarding the container from the dirname.
-        m = self.container_name_patt.match(os.path.basename(self.log_dir))
+        m = self.container_name_patt.match(path.basename(self.log_dir))
         if m is None:
             res = (None, None, None)
         else:
@@ -218,13 +245,13 @@ class CwcLog(object):
             self.interface = 'UNKNOWN'
 
         # Get the date out of the image name, if present.
-        # WARNING: This way of doing it will break in around 80 years.
+        # WARNING: This way of doing it will break around year 2088
         if '-20' in self.image_id:
             self.image_id = self.image_id.split('-')[0]
 
         # Get familiar with the image stash, if present.
-        self.img_dir = os.path.join(log_dir, IMG_DIRNAME)
-        if not os.path.exists(self.img_dir):
+        self.img_dir = path.join(log_dir, IMG_DIRNAME)
+        if not path.exists(self.img_dir):
             # If the logs are old and there's no image directory, we'll just
             # have to live without images.
             logger.warning("No image directory \"%s\" found. This transcript "
@@ -285,9 +312,8 @@ class CwcLog(object):
                    image=self.image_id, interface=self.interface)
         return textwrap.dedent(html)
 
-    def make_html(self):
-        html_parts = ['<div class="container">']
-        html_parts.append(self.make_header())
+    def make_html(self, sess_id):
+        html_parts = ['<div class="container">', self.make_header()]
 
         # Find all messages received by the BA
         for entry in self.get_io_entries():
@@ -295,10 +321,11 @@ class CwcLog(object):
             if html_part is not None:
                 html_parts.append(html_part)
         html_parts.append('</div>')
-        return make_html(html_parts)
+        return make_html(html_parts, sess_id)
 
 
-def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
+def export_logs(log_dir_path, sess_id, out_file=None, file_type='html',
+                use_cache=True):
     """Export the logs in log_dir_path into html or pdf.
 
     Parameters
@@ -306,6 +333,8 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     log_dir_path : str
         The path to the log directory which should contain log.txt and a
         directory called 'images'.
+    sess_id : str
+        The session id.
     out_file : str
         By default this will be a file 'transcript.html' or 'transcript.pdf' in
         the log_dir_path, depending on the file_type. If an out_file is
@@ -328,13 +357,13 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     if file_type not in ['pdf', 'html']:
         raise ValueError("Invalid file type: %s." % file_type)
 
-    html_file = os.path.join(log_dir_path, 'transcript.html')
+    html_file = path.join(log_dir_path, 'transcript.html')
     if out_file is None:
         out_file = html_file.replace('html', file_type)
 
     log = CwcLog(log_dir_path)
-    if not use_cache or not os.path.exists(html_file):
-        html = log.make_html()
+    if not use_cache or not path.exists(html_file):
+        html = log.make_html(sess_id)
 
         with open(html_file, 'w') as fh:
             fh.write(html)
@@ -353,22 +382,76 @@ def export_logs(log_dir_path, out_file=None, file_type='html', use_cache=True):
     return log, out_file
 
 
-if __name__ == '__main__':
-    loc = sys.argv[1]
-    from get_logs import get_logs_from_s3
-    log_dirs = get_logs_from_s3(loc)
+def main():
+    parser = argparse.ArgumentParser('Update the CWC Bob logs')
+    parser.add_argument('--name', default='logs',
+                        help='Name of directory to write logs to. Only '
+                             'provide a name, the full paths are '
+                             'automatically set by the script. '
+                             'Suggestion: set CWC_LOG_DIR first (e.g. '
+                             '`export CWC_LOG_DIR=\'logs\'` and then run '
+                             'this script like `python process_logs.py '
+                             '--name ${CWC_LOG_DIR}` + other optional '
+                             'arguments. Then when the flask app runs, it '
+                             'will use the same environement variable.')
+    parser.add_argument('--overwrite', action='store_true', default=False,
+                        help='If logs are already stored at the given '
+                             'name, overwrite the current logs there.')
+    parser.add_argument('--days-old', type=int,
+                        help='Provide the number of days back to retrieve '
+                             'the logs. If this option is not provided, '
+                             'all the logs will be downloaded.')
+    args = parser.parse_args()
+    CWC_LOG_DIR = args.name
+    loc = TEMPLATS_DIR
+    overwrite = args.overwrite  # Todo control caching
+    days_ago = args.days_old
+    if not path.isdir(ARCHIVES):
+        makedirs(ARCHIVES, exist_ok=True)
+
+    log_dirs = get_logs_from_s3(loc, past_days=days_ago)
     transcripts = []
     for dirname in log_dirs:
-        log_dir = os.path.join(loc, dirname)
-        log, out_file = export_logs(log_dir)
+        log_dir = path.join(loc, dirname)
+        log, out_file = export_logs(log_dir, dirname)
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
+        # Merge tar.gz files to single archive
+        archive_fname = path.join(ARCHIVES, dirname + '_archive.tar.gz')
+        if len([file for file in listdir(log_dir) if
+                file.endswith('.tar.gz')]) > 1:
+            with tarfile.open(archive_fname, 'w|gz') as tarf:
+                for file in listdir(log_dir):
+                    if file.endswith('.tar.gz'):
+                        fpath = path.join(log_dir, file)
+                        tarf.add(fpath, arcname=file)
+        # Copy images to static directory
+        if path.isdir(path.join(log_dir, IMG_DIRNAME)):
+            for img_file in listdir(path.join(log_dir, IMG_DIRNAME)):
+                if img_file.endswith('.png'):
+                    img_file_name = img_file.split(path.sep)[-1]
+                    source = path.abspath(
+                        path.join(log_dir, IMG_DIRNAME, img_file))
+                    static_path = dirname + '/images'
+                    dest_path = path.abspath(path.join(STATIC_DIR,
+                                                       static_path))
+                    makedirs(dest_path, exist_ok=True)
+                    copy2(source, path.join(dest_path, img_file_name))
     transcripts.sort()
-    json_fname = os.path.join(loc, 'transcripts.json')
-    with open(json_fname, 'w') as f:
-        json.dump([os.path.abspath(of) for _, of in transcripts], f, indent=1)
-    with open(os.path.join(THIS_DIR, 'index_template.html'), 'r') as f:
+    json_fname = path.join(loc, 'transcripts.json')
+    mode = 'a' if path.isfile(json_fname) else 'w'
+    with open(json_fname, mode) as f:
+        json.dump([[path.abspath(of), dt.strftime(YMD_DT)]
+                   for dt, of in transcripts], f, indent=1)
+    with open(path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
-    html = html_template.replace('{{date}}', str(datetime.now()))
-    with open(os.path.join(loc, 'index.html'), 'w') as f:
+    html = html_template.replace('<<__DATE__>>',
+                                 str(datetime.utcnow().strftime(YMD_DT)))
+    with open(path.join(loc, 'log_view.html'), 'w') as f:
         f.write(html)
+    dest = path.join(STATIC_DIR, 'style.css')
+    copy2(CSS_FILE, dest)
+
+
+if __name__ == '__main__':
+    main()
