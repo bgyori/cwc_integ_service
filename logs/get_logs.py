@@ -1,14 +1,21 @@
 import os
 import re
+import json
 import tqdm
 import boto3
 import docker
 import tarfile
 from datetime import datetime, timedelta, timezone
+from pymongo import MongoClient
 from indra.util.aws import get_s3_file_tree, get_s3_client
 
 import logging
 logger = logging.getLogger('log-getter')
+
+HERE = os.path.dirname(__file__)
+
+MONGO_URI = 'mongodb://localhost:27017/myDatabase'
+db = MongoClient(MONGO_URI).get_database('myDatabase')
 
 
 def c_ls(container, dirname):
@@ -70,6 +77,28 @@ def get_bioagent_images(cont):
         '/sw/cwc-integ/hms/bioagents/bioagents/images',
         '%s_bioagent_images.tar.gz' % make_cont_name(cont))
     return arch_name
+
+
+def get_user_session_dict(cont_name):
+    session = {}
+    sessions = db.session_users.find()
+    if sessions is None:
+        return {}
+    for sess in sessions:
+        if cont_name == sess['container_name']:
+            session = sess.copy()
+            session.pop('_id')
+            break
+
+    return session
+
+
+def get_user_info(cont, log_dir):
+    info_dict = get_user_session_dict(cont.name)
+    fname = os.path.join(log_dir, '%s_user_info.json' % make_cont_name(cont))
+    with open(fname, 'w') as f:
+        json.dump(info_dict, f)
+    return fname
 
 
 def format_cont_date(cont):
