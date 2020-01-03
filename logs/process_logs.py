@@ -52,6 +52,7 @@ def get_sess_by_cont_name_id(cont_name, cont_id):
 
 def get_user_for_session(cont_name=None, cont_id=None):
     matching_user = ''
+    user_email = ''
     if cont_id is None and cont_name is None:
         raise ValueError('either cont_id or cont_name must be provided')
     sessions = _get_sessions_by_cont_name(cont_name) if cont_name else\
@@ -59,8 +60,10 @@ def get_user_for_session(cont_name=None, cont_id=None):
     for session in sessions:
         if cont_name and session['container_name'] == cont_name or\
                 cont_id and session['container_id'] == cont_id:
-            matching_user = session['user']
-    return matching_user if matching_user else 'anonymous'
+            matching_user = session.get('user', 'anonymous')
+            user_email = session.get('email', 'no registered email')
+            break
+    return matching_user, user_email
 
 
 THIS_DIR = path.abspath(path.dirname(__file__))
@@ -350,16 +353,18 @@ class CwcLog(object):
         return self.io_entries
 
     def make_header(self):
-        user = get_user_for_session(cont_name=self.container_name)
+        user, email = get_user_for_session(cont_name=self.container_name)
         html = """
         <div class="row start_time">
           <div class="col-sm">
             Dialogue running {container} container with image {image} using
-            the {interface} interface started at: {start}. User is {user}.
+            the {interface} interface started at: {start}. User is {user} 
+            ({email}).
           </div>
         </div>
         """.format(start=self.get_start_time(), container=self.container_name,
-                   image=self.image_id, interface=self.interface, user=user)
+                   image=self.image_id, interface=self.interface, user=user,
+                   email=email)
         return textwrap.dedent(html)
 
     def make_html(self, sess_id):
