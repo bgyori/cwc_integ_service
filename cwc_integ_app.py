@@ -2,7 +2,7 @@ import re
 import time
 import json
 import docker
-from os import path
+from os import path, environ
 from datetime import datetime
 from flask import Flask, render_template, request
 from flask_wtf import Form
@@ -38,6 +38,11 @@ MY_CONTAINER_LIST = 'cwc_service_containers.json'
 TIME_FMT = '%Y%m%d%H%M%S'
 DAY = 86400  # a day in seconds.
 HOUR = 3600  # an hour in seconds.
+HERE = path.abspath(path.dirname(__file__))
+LOGS_LOCAL_DIR = environ.get('CWC_LOG_DIR', HERE)
+if LOGS_LOCAL_DIR == HERE:
+    logger.info('Environment variable "CWC_LOG_DIR" not set, using '
+                'default: %s' % HERE)
 
 
 def _load_id_dict():
@@ -304,7 +309,7 @@ def _stop_container(cont_id, remove_record=True):
     client = docker.from_env()
     cont = client.containers.get(cont_id)
     logger.info("Got container %s, aka %s." % (cont.id, cont.name))
-    get_logs_for_container(cont, record['interface'])
+    get_logs_for_container(cont, record['interface'], LOGS_LOCAL_DIR)
     cont.stop()
     cont.remove()
     logger.info("Container removed.")
