@@ -32,13 +32,17 @@ def c_ls(container, dirname):
     return res.output.decode().splitlines()
 
 
-def get_run_logs(cont):
+def get_run_logs(cont, log_dir):
     dir_conts = c_ls(cont, 'cwc-integ')
     possible_results = [p for p in dir_conts if p.startswith('20')]
     if not possible_results:
         return None
     my_result = max(possible_results)
-    arch_name = '%s_%s.tar.gz' % (make_cont_name(cont), my_result)
+    # Write to spcified log directory
+    arch_name = os.path.join(
+        log_dir,
+        '%s_%s.tar.gz' % (make_cont_name(cont), my_result)
+    )
     with open(arch_name, 'wb') as f:
         bts, meta = cont.get_archive('/sw/cwc-integ/' + my_result)
         for bit in bts:
@@ -46,35 +50,43 @@ def get_run_logs(cont):
     return arch_name
 
 
-def get_session_logs(cont):
-    fname = '%s_%s.log' % (make_cont_name(cont), format_cont_date(cont))
+def get_session_logs(cont, log_dir):
+    # Write to spcified log directory
+    fname = os.path.join(
+        log_dir,
+        '%s_%s.log' % (make_cont_name(cont), format_cont_date(cont))
+    )
     with open(fname, 'wb') as f:
         f.write(cont.logs())
     return fname
 
 
-def get_folder_gz(cont, path, arch_name):
+def get_folder_gz(cont, path, log_dir, arch_name):
     try:
         bts, meta = cont.get_archive(path)
     except Exception as e:
         logger.warning('Failed to get files from %s.' % path)
         return None
-    with open(arch_name, 'wb') as f:
+    # Write to spcified log directory
+    arch_fname = os.path.join(log_dir, arch_name)
+    with open(arch_fname, 'wb') as f:
         for bit in bts:
             f.write(bit)
-    return arch_name
+    return arch_fname
 
 
-def get_ba_session_data(cont):
+def get_ba_session_data(cont, log_dir):
     arch_name = get_folder_gz(cont,
         '/sw/cwc-integ/clic/session-data',
+        log_dir,
         '%s_ba_session_data.tar.gz' % make_cont_name(cont))
     return arch_name
 
 
-def get_bioagent_images(cont):
+def get_bioagent_images(cont, log_dir):
     arch_name = get_folder_gz(cont,
         '/sw/cwc-integ/hms/bioagents/bioagents/images',
+        log_dir,
         '%s_bioagent_images.tar.gz' % make_cont_name(cont))
     return arch_name
 
@@ -115,23 +127,26 @@ def make_cont_name(cont):
     return '%s_%s_%s' % (img_id, cont.attrs['Id'][:12], cont.name)
 
 
-def get_logs_for_container(cont, interface):
+def get_logs_for_container(cont, interface, local_dir):
     tasks = [get_session_logs, get_run_logs, get_bioagent_images,
              get_ba_session_data]
     fnames = []
     for task in tasks:
         # Get the logs.
-        fname = task(cont)
+        fname_path = task(cont, local_dir)
+        fname = fname_path.split(os.path.sep)[-1]
 
         # Rename the log file. This is a little hacky, but it should work.
         new_fname = interface + '-' + fname
-        os.rename(fname, new_fname)
+        new_fname_path = fname_path.replace(fname, new_fname)
+        os.rename(fname_path, new_fname_path)
         fname = new_fname
+        fname_path = new_fname_path
 
         # Add the file to s3.
-        logger.info("Saved %s locally." % fname)
-        fnames.append(fname)
-        _dump_on_s3(fname)
+        logger.info("Saved %s locally." % fname_path)
+        fnames.append(fname_path)
+        _dump_on_s3(fname_path)
     return tuple(fnames)
 
 
@@ -148,15 +163,18 @@ def _dump_on_s3(fname):
     return
 
 
-def get_logs():
-    """Get logs from local Docker instances and upload them to S3."""
+def get_logs(local_storage=HERE):
+    """Get logs from local Docker instances and upload them to S3
+    """
     client = docker.from_env()
     cont_list = client.containers.list(True)
     master_logs = []
     log_arches = []
     img_arches = []
     for cont in cont_list:
-        ses_name, run_name, img_name = get_logs_for_container(cont)
+        ses_name, run_name, img_name = get_logs_for_container(
+            cont=cont,
+            local_dir=local_storage)
         master_logs.append(ses_name)
         log_arches.append(run_name)
         img_arches.append(img_name)
