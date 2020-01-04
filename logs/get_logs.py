@@ -129,7 +129,7 @@ def make_cont_name(cont):
 
 def get_logs_for_container(cont, interface, local_dir):
     tasks = [get_session_logs, get_run_logs, get_bioagent_images,
-             get_ba_session_data]
+             get_ba_session_data, get_user_info]
     fnames = []
     for task in tasks:
         # Get the logs.
@@ -156,7 +156,8 @@ def _dump_on_s3(fname):
     s3_prefix = 'bob_ec2_logs/'
     if not fname:
         return
-    with open(fname, 'rb') as f:
+    mode = 'r' if fname.endswith('.json') else 'rb'
+    with open(fname, mode) as f:
         s3.put_object(Key=s3_prefix + fname, Body=f.read(),
                       Bucket=s3_bucket)
     logger.info("%s dumped on s3." % fname)
