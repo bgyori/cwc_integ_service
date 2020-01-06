@@ -1,4 +1,4 @@
 #!/bin/bash
-
+export CWC_LOG_DIR=/pmc/logs/
 pkill -f cwc_integ_app 
 python3 cwc_integ_app.py cleanup
