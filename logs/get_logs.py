@@ -224,7 +224,7 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
     logger.info('Total number of images found: %d' %
                 len([k for k in keys if 'image' in k]))
     keys = [key for key in keys if key.startswith('bob_ec2_logs/')
-            and key.endswith('.tar.gz')]
+            and key.endswith(('.tar.gz', '.json'))]
     logger.info('Number of archives: %d' % len(keys))
 
     fname_patt = re.compile('([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).tar.gz')
