@@ -100,7 +100,7 @@ def make_html(html_parts, sess_id):
 class CwcLogEntry(object):
     """Parent class for entries in the logs."""
     possible_sems = ('sys_utterance', 'user_utterance', 'display_image',
-                     'add_provenance', 'display_sbgn', 'reset')
+                     'add_provenance', 'display_sbgn', 'reset', 'user_note')
 
     def __init__(self, type, time, message, partner, log_dir):
         self.type = type
@@ -152,6 +152,7 @@ class CwcLogEntry(object):
         """
         bob_back = '#2E64FE'
         usr_back = '#A5DF00'
+        usr_note_back = '#DFA418'  # More yellow green than `usr_back`
         fore_clr = '#FFFFFF'
         if self.is_sem('sys_utterance'):
             print('SYS:', str(self.content)[:500])
@@ -165,6 +166,13 @@ class CwcLogEntry(object):
             inp = cont.gets('text')
             name = 'User'
             back_clr = usr_back
+            col_sm = 'usr_name'
+            msg_sm = 'usr_msg'
+        elif self.is_sem('user_note'):
+            print('USR-NOTE:', str(self.content)[:500])
+            inp = cont.gets('text')
+            name = 'User Note'
+            back_clr = usr_note_back
             col_sm = 'usr_name'
             msg_sm = 'usr_msg'
         elif self.is_sem('add_provenance'):
@@ -244,6 +252,9 @@ class CwcLogEntry(object):
             inner_content = self.content.get('content').get('content')
             return (is_shout and inner_content
                     and inner_content.head().upper() == 'START-CONVERSATION')
+        elif msg_type == 'user_note':
+            return (self.partner and self.partner.upper() == 'BA' and
+                    self._cont_is_type('tell', 'user-note'))
         logger.warning("Unrecognized message type: %s" % msg_type)
         return False
 
