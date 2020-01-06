@@ -68,8 +68,7 @@
             The CLiC interface focuses on simple text-based dialogue with minimal
             graphical display.
             </p>
-            <form class="form form-horizontal" method="post" action='launch_clic'
-             role="form">
+            <form class="form form-inline" method="post" action='launch_clic' role="form">
               {{ clic_form.hidden_tag() }}
               {{ wtf.form_errors(clic_form, hiddens="only") }}
               {{ wtf.form_field(clic_form.user_name, class_="form-control") }}
@@ -86,8 +85,7 @@
             with the dialogue panel, allowing richer graphical model building and
             analysis.
             </p>
-            <form class="form form-horizontal" method="post" action='launch_sbgn'
-             role="form">
+            <form class="form form-inline" method="post" action='launch_sbgn' role="form">
               {{ sbgn_form.hidden_tag() }}
               {{ wtf.form_errors(sbgn_form, hiddens="only") }}
               {{ wtf.form_field(sbgn_form.user_name, class_="form-control") }}
