@@ -71,15 +71,16 @@ SERVICE_DIR = path.abspath(path.join(THIS_DIR,
                                      path.pardir,
                                      'log_browse_service'))
 CWC_LOG_DIR = os.environ.get('CWC_LOG_DIR')
-STATIC_DIR = path.join(CWC_LOG_DIR, 'static') if CWC_LOG_DIR else path.join(
-    SERVICE_DIR, 'static')
-TEMPLATS_DIR = path.join(CWC_LOG_DIR, 'templates') if CWC_LOG_DIR else \
+STATIC_DIR = path.join(CWC_LOG_DIR, 'static') if CWC_LOG_DIR else\
+    path.join(SERVICE_DIR, 'static')
+TEMPLATES_DIR = path.join(CWC_LOG_DIR, 'templates') if CWC_LOG_DIR else\
     path.join(SERVICE_DIR, 'templates')
+ARCHIVES = path.join(CWC_LOG_DIR, '_archive') if CWC_LOG_DIR else\
+    path.join(SERVICE_DIR, '_archive')
 if not CWC_LOG_DIR:
     logger.info('Environment variable "CWC_LOG_DIR" not set, using default '
                 'paths for templates and processed logs: '
-                '%s' % TEMPLATS_DIR)
-ARCHIVES = path.join(SERVICE_DIR, '_archive')
+                '%s' % TEMPLATES_DIR)
 CSS_FILE = path.join(THIS_DIR, 'style.css')
 IMG_DIRNAME = 'images'
 SESS_ID_MARK = '__SESS_ID_MARKER__'
@@ -468,8 +469,7 @@ def main():
                              'the logs. If this option is not provided, '
                              'all the logs will be downloaded.')
     args = parser.parse_args()
-    CWC_LOG_DIR = args.name
-    loc = TEMPLATS_DIR
+    loc = TEMPLATES_DIR
     overwrite = args.overwrite  # Todo control caching
     days_ago = args.days_old
     if not path.isdir(ARCHIVES):
