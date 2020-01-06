@@ -264,14 +264,16 @@ def _launch_app(interface_port_num, app_name, extension=''):
 
 
 class ClicForm(Form):
+    # validators documentation:
+    # https://wtforms.readthedocs.io/en/stable/validators.html
     user_name = StringField('Name', validators=[validators.unicode_literals])
-    user_email = EmailField('contact email', validators=[validators.Email()])
+    user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with CLiC')
 
 
 class SbgnForm(Form):
     user_name = StringField('Name', validators=[validators.unicode_literals])
-    user_email = EmailField('contact email', validators=[validators.Email()])
+    user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with SBGN')
 
 
