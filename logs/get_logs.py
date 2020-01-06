@@ -134,6 +134,9 @@ def get_logs_for_container(cont, interface, local_dir):
     for task in tasks:
         # Get the logs.
         fname_path = task(cont, local_dir)
+        if not fname_path:
+            logger.info('No output found for %s' % str(task))
+            continue
         fname = fname_path.split(os.path.sep)[-1]
 
         # Rename the log file. This is a little hacky, but it should work.
