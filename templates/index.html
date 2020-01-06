@@ -59,10 +59,13 @@
       .btn {
         margin: 5px;
       }
+      #sbgn-panel, #clic-panel {
+        min-height: 500px;
+      }
     </style>
     <div class="row">
         <div class="col-md-6" align="center">
-            <div class="panel panel-default">
+            <div id="clic-panel" class="panel panel-default">
             <img src="/static/clic_small.png">
             <p>
             The CLiC interface focuses on simple text-based dialogue with minimal
@@ -78,7 +81,7 @@
             </div>
         </div>
         <div class="col-md-6" align="center">
-            <div class="panel panel-default">
+            <div id="sbgn-panel" class="panel panel-default">
             <img src="/static/sbgn_small.png">
             <p>
             The SBGNViz interface contains a large model canvas along
