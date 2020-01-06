@@ -485,10 +485,10 @@ def main():
         # Merge tar.gz files to single archive
         archive_fname = path.join(ARCHIVES, dirname + '_archive.tar.gz')
         if len([file for file in listdir(log_dir) if
-                file.endswith('.tar.gz')]) > 1:
+                file.endswith('.tar.gz') or file.endswith('.json')]) > 1:
             with tarfile.open(archive_fname, 'w|gz') as tarf:
                 for file in listdir(log_dir):
-                    if file.endswith('.tar.gz'):
+                    if file.endswith(('.tar.gz', '.json')):
                         fpath = path.join(log_dir, file)
                         tarf.add(fpath, arcname=file)
         # Copy images to static directory
