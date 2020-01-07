@@ -197,7 +197,7 @@ class CwcLogEntry(object):
                                          SESS_ID_MARK, *img_path_seg])
 
             # Hardcode path to static folder:
-            # /static/<name>/<sess_id>/images/<image.png>
+            # /static/<sess_id>/images/<image.png>
             inp = ('<img src=\"/%s\" alt=\"Image '
                    '/%s not available\">' % (img_loc, img_loc))
             img_type = cont.gets('type')
@@ -371,6 +371,7 @@ class CwcLog(object):
         return self.io_entries
 
     def make_header(self):
+        # Get user and id from the Mongo DB
         user, email = get_user_for_session(cont_name=self.container_name)
         html = """
         <div class="row start_time">
