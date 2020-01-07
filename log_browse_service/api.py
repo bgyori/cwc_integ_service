@@ -63,48 +63,52 @@ user_patt = re.compile('User is (.*?) \((.*?)\)\.')
 sortable_date_format = '%Y-%m-%d-%H-%M-%S'
 log_date_format = '%I:%M %p %m/%d/%y'
 session_id_list = []
+current_log_dir_count = 0
 
 
 def update_session_id_list():
-    global session_id_list
-    # Get session id and datetime (and user name in future)
-    session_id_list_cache = []
-    logger.info('Updating session list cache')
-    for sess_id in listdir(LOGS):
-        if path.isfile(sess_id):
-            continue
-        html_path = path.join(LOGS, sess_id, 'transcript.html')
-        raw_txt_path = path.join(LOGS, sess_id, 'log.txt')
-        if path.isfile(html_path) and path.isfile(raw_txt_path):
-            with open(raw_txt_path, 'r') as f:
-                dt_str = f.readline()
-            m = time_patt.search(dt_str)
-            file_dt = 'unknown start time' if m is None else\
-                datetime.strptime(' '.join(m.groups()),
-                                  log_date_format).strftime(
-                    sortable_date_format)
+    global session_id_list, current_log_dir_count
+    if len(listdir(LOGS)) > current_log_dir_count:
+        new_dir_count = listdir(LOGS)
+        # Get session id and datetime (and user name in future)
+        session_id_list_cache = []
+        logger.info('Updating session list cache')
+        for sess_id in listdir(LOGS):
+            if path.isfile(sess_id):
+                continue
+            html_path = path.join(LOGS, sess_id, 'transcript.html')
+            raw_txt_path = path.join(LOGS, sess_id, 'log.txt')
+            if path.isfile(html_path) and path.isfile(raw_txt_path):
+                with open(raw_txt_path, 'r') as f:
+                    dt_str = f.readline()
+                m = time_patt.search(dt_str)
+                file_dt = 'unknown start time' if m is None else\
+                    datetime.strptime(' '.join(m.groups()),
+                                      log_date_format).strftime(
+                        sortable_date_format)
 
-            with open(html_path, 'r') as htmlf:
-                html_str = htmlf.read()
-                soup = BeautifulSoup(html_str, 'html.parser')
-                user_str = soup.find('div', class_='start_time')
-                if user_str is not None and user_str.div is not None:
-                    mm = user_patt.search(
-                        user_str.div.text.replace('\n', '').strip())
-            user = 'anonymous' if mm is None or\
-                mm is not None and not mm.groups()[0].strip() else \
-                mm.groups()[0].strip()
-            if (sess_id, file_dt, user) not in session_id_list_cache:
-                session_id_list_cache.append((sess_id, file_dt, user))
-        elif sess_id not in ['transcripts.json', 'login.html',
-                             'log_view.html', 'browse_index.html']:
-            logger.warning('session %s does not have any html formatted '
-                           'log transcript.' % sess_id)
-    session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
-    if len(session_id_list) < len(session_id_list_cache):
-        logger.info('%d new logs found!' %
-                    (len(session_id_list_cache)-len(session_id_list)))
-        session_id_list = session_id_list_cache
+                with open(html_path, 'r') as htmlf:
+                    html_str = htmlf.read()
+                    soup = BeautifulSoup(html_str, 'html.parser')
+                    user_str = soup.find('div', class_='start_time')
+                    if user_str is not None and user_str.div is not None:
+                        mm = user_patt.search(
+                            user_str.div.text.replace('\n', '').strip())
+                user = 'anonymous' if mm is None or\
+                    mm is not None and not mm.groups()[0].strip() else \
+                    mm.groups()[0].strip()
+                if (sess_id, file_dt, user) not in session_id_list_cache:
+                    session_id_list_cache.append((sess_id, file_dt, user))
+            elif sess_id not in ['transcripts.json', 'login.html',
+                                 'log_view.html', 'browse_index.html']:
+                logger.warning('session %s does not have any html formatted '
+                               'log transcript.' % sess_id)
+        session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
+        if len(session_id_list) < len(session_id_list_cache):
+            logger.info('%d new logs found!' %
+                        (len(session_id_list_cache)-len(session_id_list)))
+            session_id_list = session_id_list_cache
+        current_log_dir_count = new_dir_count
     logger.info('Finished updating session list cache')
 
 
