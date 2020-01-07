@@ -60,9 +60,11 @@ GLOBAL_PRELOAD = True
 time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
 sortable_date_format = '%Y-%m-%d-%H-%M-%S'
 log_date_format = '%I:%M %p %m/%d/%y'
+session_id_list = []
 
 
 def update_session_id_list():
+    global session_id_list
     # Get session id and datetime (and user name in future)
     session_id_list_cache = []
     logger.info('Updating session list cache')
@@ -89,7 +91,8 @@ def update_session_id_list():
             logger.warning('session %s does not have any html formatted '
                            'log transcript.' % sess_id)
     session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
-    session['session_id_list_cache'] = session_id_list_cache
+    if len(session_id_list) < len(session_id_list_cache):
+        session_id_list = session_id_list_cache
 
 
 def page_wrapper(f):
@@ -134,13 +137,14 @@ def session_expiration_check():
 def browse():
     # This route should render "index_template" showing the first log
     # (default) or the provided page number (zero-indexed)
+    global session_id_list
     page = request.args.get('page', 0)
     update_session_id_list()
     session['last_page'] = '/browse?page=%s' % page
     return render_template('log_view.html',
                            transcript_json=[
                                t[0] for t in
-                               session['session_id_list_cache']],
+                               session_id_list],
                            page=page,
                            base_url=url_for('browse'))
 
@@ -169,10 +173,10 @@ def index():
     # This route should list all the session ids with the user (if
     # available), time and date. Clicking on one of them should link to
     # the index page and set curr_idx to the corresponding page
+    global session_id_list
     update_session_id_list()
     session['last_page'] = '/index'
-    return render_template('browse_index.html',
-                           sess_id_list=session['session_id_list_cache'])
+    return render_template('browse_index.html', sess_id_list=session_id_list)
 
 
 @app.route('/login')
