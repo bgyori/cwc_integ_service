@@ -79,10 +79,6 @@ def update_session_id_list():
             with open(raw_txt_path, 'r') as f:
                 dt_str = f.readline()
             m = time_patt.search(dt_str)
-
-            # ToDo find user info for future implementation
-            # user = user_patt.search()
-            user = ''
             file_dt = 'unknown start time' if m is None else\
                 datetime.strptime(' '.join(m.groups()),
                                   log_date_format).strftime(
@@ -100,12 +96,16 @@ def update_session_id_list():
                 mm.groups()[0].strip()
             if (sess_id, file_dt, user) not in session_id_list_cache:
                 session_id_list_cache.append((sess_id, file_dt, user))
-        else:
+        elif sess_id not in ['transcripts.json', 'login.html',
+                             'log_view.html', 'browse_index.html']:
             logger.warning('session %s does not have any html formatted '
                            'log transcript.' % sess_id)
     session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
     if len(session_id_list) < len(session_id_list_cache):
+        logger.info('%d new logs found!' %
+                    (len(session_id_list_cache)-len(session_id_list)))
         session_id_list = session_id_list_cache
+    logger.info('Finished updating session list cache')
 
 
 def page_wrapper(f):
