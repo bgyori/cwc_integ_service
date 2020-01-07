@@ -55,7 +55,7 @@ if not path.isdir(LOGS):
                      '"logs" available in the templates directory.' %
                      TEMPLATS_DIR)
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
-ARCHIVES = path.join(HERE, '_archive')
+ARCHIVES = path.join(LOGS_DIR_NAME, '_archive')
 GLOBAL_PRELOAD = True
 time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
 sortable_date_format = '%Y-%m-%d-%H-%M-%S'
