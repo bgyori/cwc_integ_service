@@ -227,7 +227,7 @@ class CwcLogEntry(object):
             return False
 
     def _content_is(self, msg_type):
-        simple_types = ['display_sbgn', 'add_provenance']
+        simple_types = ['display_sbgn']
         if msg_type in simple_types:
             msg_type = msg_type.replace('_', '-')
             ret = self._cont_is_type('tell', msg_type)
@@ -235,6 +235,9 @@ class CwcLogEntry(object):
         elif msg_type == 'display_image':
             return (self.partner and self.partner.upper() != 'BA' and
                     self._cont_is_type('tell', 'display-image'))
+        elif msg_type == 'add_provenance':
+            return (self.partner and self.partner.upper() != 'BA' and
+                    self._cont_is_type('tell', 'add-provenance'))
         elif msg_type == 'sys_utterance':
             return (self.partner and self.partner.upper() == 'BA' and
                     self._cont_is_type('tell', 'spoken'))
