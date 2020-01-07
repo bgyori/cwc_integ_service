@@ -5,6 +5,7 @@ import logging
 from shutil import copy2
 from functools import wraps
 from os import path, listdir
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, url_for,\
     send_from_directory, session, redirect, Response
@@ -58,6 +59,7 @@ TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
 ARCHIVES = path.join(LOGS_DIR_NAME, '_archive')
 GLOBAL_PRELOAD = True
 time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
+user_patt = re.compile('User is (.*?) \((.*?)\)\.')
 sortable_date_format = '%Y-%m-%d-%H-%M-%S'
 log_date_format = '%I:%M %p %m/%d/%y'
 session_id_list = []
@@ -85,6 +87,17 @@ def update_session_id_list():
                 datetime.strptime(' '.join(m.groups()),
                                   log_date_format).strftime(
                     sortable_date_format)
+
+            with open(html_path, 'r') as htmlf:
+                html_str = htmlf.read()
+                soup = BeautifulSoup(html_str, 'html.parser')
+                user_str = soup.find('div', class_='start_time')
+                if user_str is not None and user_str.div is not None:
+                    mm = user_patt.search(
+                        user_str.div.text.replace('\n', '').strip())
+            user = 'anonymous' if mm is None or\
+                mm is not None and not mm.groups()[0].strip() else \
+                mm.groups()[0].strip()
             if (sess_id, file_dt, user) not in session_id_list_cache:
                 session_id_list_cache.append((sess_id, file_dt, user))
         else:
