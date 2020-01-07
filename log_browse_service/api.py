@@ -215,10 +215,11 @@ def check_login():
     with open(HASH_PASS_FPATH, 'rb') as bf:
         logger.info('Getting cached hashed password')
         hp = bf.read()
+
     if verify_password(hashed_password=hp,
                        guessed_password=pwd,
-                       maxtime=6.0):  # Seems to need very high maxtime when
-        # running locally
+                       # Seems to need very high maxtime when running locally
+                       maxtime=6.0):
         logger.info('Password correct, redirecting to last page')
         session['logged_in'] = True
         response_json = {'authorized': True,
@@ -231,6 +232,7 @@ def check_login():
         code = 401
     return Response(json.dumps(response_json), status=code,
                     mimetype='application/json')
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port='8888')
