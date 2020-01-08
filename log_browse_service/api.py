@@ -109,7 +109,9 @@ def update_session_id_list():
                         (len(session_id_list_cache)-len(session_id_list)))
             session_id_list = session_id_list_cache
         current_log_dir_count = new_dir_count
-    logger.info('Finished updating session list cache')
+        logger.info('Finished updating session list cache')
+    else:
+        logger.info('No new session to add to the list')
 
 
 def page_wrapper(f):
