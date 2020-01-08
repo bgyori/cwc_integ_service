@@ -460,19 +460,9 @@ def export_logs(log_dir_path, sess_id, out_file=None, file_type='html',
 
 def main():
     parser = argparse.ArgumentParser('Update the CWC Bob logs')
-    parser.add_argument('--name', default='logs',
-                        help='Name of directory to write logs to. Only '
-                             'provide a name, the full paths are '
-                             'automatically set by the script. '
-                             'Suggestion: set CWC_LOG_DIR first (e.g. '
-                             '`export CWC_LOG_DIR=\'logs\'` and then run '
-                             'this script like `python process_logs.py '
-                             '--name ${CWC_LOG_DIR}` + other optional '
-                             'arguments. Then when the flask app runs, it '
-                             'will use the same environement variable.')
     parser.add_argument('--overwrite', action='store_true', default=False,
-                        help='If logs are already stored at the given '
-                             'name, overwrite the current logs there.')
+                        help='If logs are already stored at ${CWC_LOG_DIR}, '
+                             'overwrite the current logs there.')
     parser.add_argument('--days-old', type=int,
                         help='Provide the number of days back to retrieve '
                              'the logs. If this option is not provided, '
