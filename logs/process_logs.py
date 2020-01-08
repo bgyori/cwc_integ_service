@@ -486,11 +486,14 @@ def main():
 
     log_dirs = get_logs_from_s3(loc, past_days=days_ago)
     transcripts = []
+    logger.info('Processing logs to html format')
     for dirname in log_dirs:
+        # Set paths, get log for session
         log_dir = path.join(loc, dirname)
         log, out_file = export_logs(log_dir, dirname)
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
+
         # Merge tar.gz files to single archive
         archive_fname = path.join(ARCHIVES, dirname + '_archive.tar.gz')
         if len([file for file in listdir(log_dir) if
@@ -500,6 +503,7 @@ def main():
                     if file.endswith(('.tar.gz', '.json')):
                         fpath = path.join(log_dir, file)
                         tarf.add(fpath, arcname=file)
+
         # Copy images to static directory
         if path.isdir(path.join(log_dir, IMG_DIRNAME)):
             for img_file in listdir(path.join(log_dir, IMG_DIRNAME)):
@@ -513,9 +517,12 @@ def main():
                     makedirs(dest_path, exist_ok=True)
                     copy2(source, path.join(dest_path, img_file_name))
     transcripts.sort()
-    json_fname = path.join(loc, 'transcripts.json')
-    mode = 'a' if path.isfile(json_fname) else 'w'
-    with open(json_fname, mode) as f:
+    json_fname = 'transcripts.json'
+    logger.info('Creating json with list of all transcripts in %s' %
+                json_fname)
+    json_fname_path = path.join(loc, json_fname)
+    mode = 'a' if path.isfile(json_fname_path) else 'w'
+    with open(json_fname_path, mode) as f:
         json.dump([[path.abspath(of), dt.strftime(YMD_DT)]
                    for dt, of in transcripts], f, indent=1)
     logger.info('Copying html and css files to their directories in %s' %
