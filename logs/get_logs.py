@@ -262,7 +262,6 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
             tf.write(byte_stream)
         # Re-open file
         if tgz_file.endswith('.json'):
-            logger.info('Skipping json file %s' % key)
             continue
         with open(tgz_file, 'rb') as file_byte_stream:
             with tarfile.open(None, 'r', fileobj=file_byte_stream) as tarf:
