@@ -81,7 +81,9 @@ if not CWC_LOG_DIR:
     logger.info('Environment variable "CWC_LOG_DIR" not set, using default '
                 'paths for templates and processed logs: '
                 '%s' % TEMPLATES_DIR)
-CSS_FILE = path.join(THIS_DIR, 'style.css')
+CSS_FILE = path.join(SERVICE_DIR, 'static', 'style.css')
+SRC_LOGIN_HTML = path.join(SERVICE_DIR, 'templates', 'login.html')
+SRC_BROWSE_HTML = path.join(SERVICE_DIR, 'templates', 'browse_index.html')
 IMG_DIRNAME = 'images'
 SESS_ID_MARK = '__SESS_ID_MARKER__'
 YMD_DT = '%Y-%m-%d-%H-%M-%S'
@@ -516,14 +518,24 @@ def main():
     with open(json_fname, mode) as f:
         json.dump([[path.abspath(of), dt.strftime(YMD_DT)]
                    for dt, of in transcripts], f, indent=1)
+    logger.info('Copying html and css files to their directories in %s' %
+                CWC_LOG_DIR)
     with open(path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
     html = html_template.replace('<<__DATE__>>',
                                  str(datetime.utcnow().strftime(YMD_DT)))
     with open(path.join(loc, 'log_view.html'), 'w') as f:
         f.write(html)
-    dest = path.join(STATIC_DIR, 'style.css')
-    copy2(CSS_FILE, dest)
+
+    # Copy CSS file
+    css_dst = path.join(STATIC_DIR, 'style.css')
+    copy2(CSS_FILE, css_dst)
+
+    # Copy login.html and browse_index.html
+    login_dst = path.join(TEMPLATES_DIR, 'login.html')
+    browse_dst = path.join(TEMPLATES_DIR, 'browse_index.html')
+    copy2(SRC_BROWSE_HTML, browse_dst)
+    copy2(SRC_LOGIN_HTML, login_dst)
 
 
 if __name__ == '__main__':
