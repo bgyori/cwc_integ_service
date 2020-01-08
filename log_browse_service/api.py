@@ -69,7 +69,7 @@ current_log_dir_count = 0
 def update_session_id_list():
     global session_id_list, current_log_dir_count
     if len(listdir(LOGS)) > current_log_dir_count:
-        new_dir_count = listdir(LOGS)
+        new_dir_count = len(listdir(LOGS))
         # Get session id and datetime (and user name in future)
         session_id_list_cache = []
         logger.info('Updating session list cache')
