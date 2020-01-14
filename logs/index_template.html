@@ -32,6 +32,7 @@
         }
     </style>
     <script type="text/javascript">
+      let first_load = true;
       let curr_idx = {{ page }};
       let sess_id = '{{ sess_id }}';
       let static_link = `/browse?sess_id=${sess_id}`;
@@ -46,9 +47,8 @@
           new_idx = transcript_list.length-1;
         }
 
-        if (document.getElementById('msg').textContent.length > 0 &&
-          curr_msg.length > 0) {
-
+        if (!first_load) {
+          document.getElementById('msg').textContent = '';
         }
 
         console.log(`new_idx=${new_idx}`);
@@ -60,6 +60,7 @@
         document.getElementById('static-link').textContent = document.getElementById('static-link').href;
         document.getElementById('download-link').href = '{{ url_for("download_file", sess_id=sess_id) }}';
         document.getElementById('frame').src = `iframe_page/${sess_id}`;
+        first_load = false;
       }
     </script>
   </head>
