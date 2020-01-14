@@ -155,17 +155,27 @@ def session_expiration_check():
 @page_wrapper
 def browse():
     # This route should render "index_template" showing the first log
-    # (default) or the provided page number (zero-indexed)
+    # (default) or the log associated with the provided session id
     global session_id_list
-    page = request.args.get('page', 0)
     update_session_id_list()
-    session['last_page'] = '/browse?page=%s' % page
+    tjson = [t[0] for t in session_id_list]
+    sess_id = request.args.get('sess_id') if request.args.get('sess_id')\
+        else tjson[0]
+    try:
+        page = tjson.index(sess_id) if sess_id else 0
+        msg = ''
+    except ValueError:
+        # session id was not in list
+        page = 0
+        msg = 'Session id %s was not found' % sess_id
+
+    session['last_page'] = '/browse?=%s' % page
     return render_template('log_view.html',
-                           transcript_json=[
-                               t[0] for t in
-                               session_id_list],
+                           transcript_json=tjson,
                            page=page,
-                           base_url=url_for('browse'))
+                           sess_id=sess_id,
+                           base_url=url_for('browse'),
+                           msg=msg)
 
 
 @app.route('/iframe_page/<sess_id>')
