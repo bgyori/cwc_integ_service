@@ -33,8 +33,7 @@
     </style>
     <script type="text/javascript">
       let curr_idx = {{ page }};
-      let curr_msg = {{ msg }};
-      let sess_id = {{ sess_id }};
+      let sess_id = '{{ sess_id }}';
       let static_link = `/browse?sess_id=${sess_id}`;
       let transcript_list = {{ transcript_json|safe }};
       function moveToPage(new_idx) {
@@ -69,7 +68,7 @@
       <h2>Transcript Browser</h2>
       <p><a href="{{ url_for('index') }}">Back to session list</a></p>
       <p>Logs were uploaded on <<__DATE__>></p>
-      <p id="page-count">Current page: {{ page }} of {{ transcript_json|len }}</p>
+      <p id="page-count">Current page: {{ page }} of {{ transcript_json|length }}</p>
       <p>Static link to page: <a id="static-link" href=""></a></p>
       <p>The logs for this page are available for <a id="download-link" href="">download</a></p>
       <p id="msg" style="color: indianred">{{ msg }}</p>
