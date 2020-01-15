@@ -5,6 +5,7 @@ import logging
 from shutil import copy2
 from functools import wraps
 from os import path, listdir
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, url_for,\
     send_from_directory, session, redirect, Response
@@ -55,41 +56,62 @@ if not path.isdir(LOGS):
                      '"logs" available in the templates directory.' %
                      TEMPLATS_DIR)
 TRANSCRIPT_JSON_PATH = path.join(LOGS, 'transcripts.json')
-ARCHIVES = path.join(HERE, '_archive')
+ARCHIVES = path.join(LOGS_DIR_NAME, '_archive')
 GLOBAL_PRELOAD = True
 time_patt = re.compile('<LOG TIME=\"(.*?)\"\s+DATE=\"(.*?)\".*?>')
+user_patt = re.compile('User is (.*?) \((.*?)\)\.')
 sortable_date_format = '%Y-%m-%d-%H-%M-%S'
 log_date_format = '%I:%M %p %m/%d/%y'
+session_id_list = []
+current_log_dir_count = 0
 
 
 def update_session_id_list():
-    # Get session id and datetime (and user name in future)
-    session_id_list_cache = []
-    logger.info('Updating session list cache')
-    for sess_id in listdir(LOGS):
-        if path.isfile(sess_id):
-            continue
-        html_path = path.join(LOGS, sess_id, 'transcript.html')
-        raw_txt_path = path.join(LOGS, sess_id, 'log.txt')
-        if path.isfile(html_path) and path.isfile(raw_txt_path):
-            with open(raw_txt_path, 'r') as f:
-                dt_str = f.readline()
-            m = time_patt.search(dt_str)
+    global session_id_list, current_log_dir_count
+    if len(listdir(LOGS)) > current_log_dir_count:
+        new_dir_count = len(listdir(LOGS))
+        # Get session id and datetime (and user name in future)
+        session_id_list_cache = []
+        logger.info('Updating session list cache')
+        for sess_id in listdir(LOGS):
+            if path.isfile(sess_id):
+                continue
+            html_path = path.join(LOGS, sess_id, 'transcript.html')
+            raw_txt_path = path.join(LOGS, sess_id, 'log.txt')
+            if path.isfile(html_path) and path.isfile(raw_txt_path):
+                with open(raw_txt_path, 'r') as f:
+                    dt_str = f.readline()
+                m = time_patt.search(dt_str)
+                file_dt = 'unknown start time' if m is None else\
+                    datetime.strptime(' '.join(m.groups()),
+                                      log_date_format).strftime(
+                        sortable_date_format)
 
-            # ToDo find user info for future implementation
-            # user = user_patt.search()
-            user = ''
-            file_dt = 'unknown start time' if m is None else\
-                datetime.strptime(' '.join(m.groups()),
-                                  log_date_format).strftime(
-                    sortable_date_format)
-            if (sess_id, file_dt, user) not in session_id_list_cache:
-                session_id_list_cache.append((sess_id, file_dt, user))
-        else:
-            logger.warning('session %s does not have any html formatted '
-                           'log transcript.' % sess_id)
-    session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
-    session['session_id_list_cache'] = session_id_list_cache
+                with open(html_path, 'r') as htmlf:
+                    html_str = htmlf.read()
+                    soup = BeautifulSoup(html_str, 'html.parser')
+                    user_str = soup.find('div', class_='start_time')
+                    if user_str is not None and user_str.div is not None:
+                        mm = user_patt.search(
+                            user_str.div.text.replace('\n', '').strip())
+                user = 'anonymous' if mm is None or\
+                    mm is not None and not mm.groups()[0].strip() else \
+                    mm.groups()[0].strip()
+                if (sess_id, file_dt, user) not in session_id_list_cache:
+                    session_id_list_cache.append((sess_id, file_dt, user))
+            elif sess_id not in ['transcripts.json', 'login.html',
+                                 'log_view.html', 'browse_index.html']:
+                logger.warning('session %s does not have any html formatted '
+                               'log transcript.' % sess_id)
+        session_id_list_cache.sort(key=lambda t: t[1], reverse=True)
+        if len(session_id_list) < len(session_id_list_cache):
+            logger.info('%d new logs found!' %
+                        (len(session_id_list_cache)-len(session_id_list)))
+            session_id_list = session_id_list_cache
+        current_log_dir_count = new_dir_count
+        logger.info('Finished updating session list cache')
+    else:
+        logger.info('No new session to add to the list')
 
 
 def page_wrapper(f):
@@ -133,16 +155,27 @@ def session_expiration_check():
 @page_wrapper
 def browse():
     # This route should render "index_template" showing the first log
-    # (default) or the provided page number (zero-indexed)
-    page = request.args.get('page', 0)
+    # (default) or the log associated with the provided session id
+    global session_id_list
     update_session_id_list()
-    session['last_page'] = '/browse?page=%s' % page
+    tjson = [t[0] for t in session_id_list]
+    sess_id = request.args.get('sess_id') if request.args.get('sess_id')\
+        else tjson[0]
+    try:
+        page = tjson.index(sess_id) if sess_id else 0
+        msg = ''
+    except ValueError:
+        # session id was not in list
+        page = 0
+        msg = 'Session id %s was not found' % sess_id
+
+    session['last_page'] = '/browse?=%s' % page
     return render_template('log_view.html',
-                           transcript_json=[
-                               t[0] for t in
-                               session['session_id_list_cache']],
+                           transcript_json=tjson,
                            page=page,
-                           base_url=url_for('browse'))
+                           sess_id=sess_id,
+                           base_url=url_for('browse'),
+                           msg=msg)
 
 
 @app.route('/iframe_page/<sess_id>')
@@ -169,10 +202,10 @@ def index():
     # This route should list all the session ids with the user (if
     # available), time and date. Clicking on one of them should link to
     # the index page and set curr_idx to the corresponding page
+    global session_id_list
     update_session_id_list()
     session['last_page'] = '/index'
-    return render_template('browse_index.html',
-                           sess_id_list=session['session_id_list_cache'])
+    return render_template('browse_index.html', sess_id_list=session_id_list)
 
 
 @app.route('/login')
@@ -194,10 +227,11 @@ def check_login():
     with open(HASH_PASS_FPATH, 'rb') as bf:
         logger.info('Getting cached hashed password')
         hp = bf.read()
+
     if verify_password(hashed_password=hp,
                        guessed_password=pwd,
-                       maxtime=6.0):  # Seems to need very high maxtime when
-        # running locally
+                       # Seems to need very high maxtime when running locally
+                       maxtime=6.0):
         logger.info('Password correct, redirecting to last page')
         session['logged_in'] = True
         response_json = {'authorized': True,
@@ -210,6 +244,7 @@ def check_login():
         code = 401
     return Response(json.dumps(response_json), status=code,
                     mimetype='application/json')
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port='8888')

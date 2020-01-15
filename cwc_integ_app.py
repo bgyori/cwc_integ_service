@@ -2,13 +2,14 @@ import re
 import time
 import json
 import docker
-from os import path
+from os import path, environ
 from datetime import datetime
 from flask import Flask, render_template, request
 from flask_wtf import Form
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
-from wtforms import SubmitField
+from wtforms import SubmitField, StringField, validators
+from wtforms.fields.html5 import EmailField
 
 from logs.get_logs import get_logs_for_container
 
@@ -37,6 +38,11 @@ MY_CONTAINER_LIST = 'cwc_service_containers.json'
 TIME_FMT = '%Y%m%d%H%M%S'
 DAY = 86400  # a day in seconds.
 HOUR = 3600  # an hour in seconds.
+HERE = path.abspath(path.dirname(__file__))
+LOGS_LOCAL_DIR = environ.get('CWC_LOG_DIR', HERE)
+if LOGS_LOCAL_DIR == HERE:
+    logger.info('Environment variable "CWC_LOG_DIR" not set, using '
+                'default: %s' % HERE)
 
 
 def _load_id_dict():
@@ -204,7 +210,26 @@ def has_token(token):
     return False
 
 
+def user_session_association(user, email, cont_id, cont_name, app_name,
+                             extension, port, interface_port_number):
+    mongo.db.session_users.insert_one({'user': user,
+                                       'email': email,
+                                       'container_id': cont_id,
+                                       'container_name': cont_name,
+                                       'app_name': app_name,
+                                       'extension': extension,
+                                       'port': port,
+                                       'interface_port':
+                                           interface_port_number})
+
+
 def _launch_app(interface_port_num, app_name, extension=''):
+    user = request.form.get('user_name', '')
+    email = request.form.get('user_email', '')
+    if user or email:
+        logger.info('User %s with email %s launched app' %
+                    (user if user else '(username not provided)',
+                     email if email else '(no email)'))
     num_sessions = get_num_sessions()
     if num_sessions >= MAX_SESSIONS:
         logger.info('Number of sessions: %d' % num_sessions)
@@ -227,6 +252,10 @@ def _launch_app(interface_port_num, app_name, extension=''):
     host = base_host + (':%d' % port + extension)
     logger.info('Will redirect to address: %s' % host)
     cont_id, cont_name = _run_container(port, interface_port_num, app_name)
+    if user or email:
+        logger.info('Adding user info for user %s' % user)
+        user_session_association(user, email, cont_id, cont_name, app_name,
+                                 extension, port, interface_port_num)
     logger.info('Start redirecting %s interface.' % app_name)
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
@@ -235,10 +264,16 @@ def _launch_app(interface_port_num, app_name, extension=''):
 
 
 class ClicForm(Form):
+    # validators documentation:
+    # https://wtforms.readthedocs.io/en/stable/validators.html
+    user_name = StringField('Name', validators=[validators.unicode_literals])
+    user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with CLiC')
 
 
 class SbgnForm(Form):
+    user_name = StringField('Name', validators=[validators.unicode_literals])
+    user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with SBGN')
 
 
@@ -276,7 +311,7 @@ def _stop_container(cont_id, remove_record=True):
     client = docker.from_env()
     cont = client.containers.get(cont_id)
     logger.info("Got container %s, aka %s." % (cont.id, cont.name))
-    get_logs_for_container(cont, record['interface'])
+    get_logs_for_container(cont, record['interface'], LOGS_LOCAL_DIR)
     cont.stop()
     cont.remove()
     logger.info("Container removed.")

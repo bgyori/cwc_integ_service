@@ -32,8 +32,11 @@
         }
     </style>
     <script type="text/javascript">
+      let first_load = true;
       let curr_idx = {{ page }};
-      let transcript_list = {{ transcript_json|safe }}
+      let sess_id = '{{ sess_id }}';
+      let static_link = `/browse?sess_id=${sess_id}`;
+      let transcript_list = {{ transcript_json|safe }};
       function moveToPage(new_idx) {
         // Go to the indicated value.
         if (new_idx < 0) {
@@ -43,13 +46,21 @@
           // If too high, reset to max
           new_idx = transcript_list.length-1;
         }
+
+        if (!first_load) {
+          document.getElementById('msg').textContent = '';
+        }
+
         console.log(`new_idx=${new_idx}`);
-        let sess_id = transcript_list[new_idx];
+        sess_id = transcript_list[new_idx];
         console.log(`sess_id=${sess_id}`);
         curr_idx = new_idx;
         document.getElementById('page-count').textContent = `Current page: ${new_idx} of ${transcript_list.length-1}`;
-        document.getElementById('download-link').href = `/files/${sess_id}`;
+        document.getElementById('static-link').href = `/browse?sess_id=${sess_id}`;
+        document.getElementById('static-link').textContent = document.getElementById('static-link').href;
+        document.getElementById('download-link').href = '{{ url_for("download_file", sess_id=sess_id) }}';
         document.getElementById('frame').src = `iframe_page/${sess_id}`;
+        first_load = false;
       }
     </script>
   </head>
@@ -58,8 +69,10 @@
       <h2>Transcript Browser</h2>
       <p><a href="{{ url_for('index') }}">Back to session list</a></p>
       <p>Logs were uploaded on <<__DATE__>></p>
-      <p id="page-count">Current page: {{ page }}</p>
+      <p id="page-count">Current page: {{ page }} of {{ transcript_json|length }}</p>
+      <p>Static link to page:<br><a id="static-link" href=""></a></p>
       <p>The logs for this page are available for <a id="download-link" href="">download</a></p>
+      <p id="msg" style="color: indianred">{{ msg }}</p>
     </div>
     <div class="buttons" align="center">
       <button class="previous" type="button" onclick="moveToPage(0)">

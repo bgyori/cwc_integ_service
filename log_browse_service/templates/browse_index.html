@@ -31,7 +31,7 @@
       {% for sess_id, dt_str, user in sess_id_list %}
         <tr>
           <td class="number-column">{{ loop.index0 }}</td>
-          <td><a href="/browse?page={{ loop.index0 }}" title="Go to page {{ loop.index0 }}">{{ sess_id }}</a></td>
+          <td><a href="/browse?sess_id={{ sess_id }}" title="Go to page {{ loop.index0 }}">{{ sess_id }}</a></td>
           <td>{{ dt_str }}</td>
           <td>{{ user }}</td>
           <td><a href="{{ url_for('download_file', sess_id=sess_id) }}">download</a></td>

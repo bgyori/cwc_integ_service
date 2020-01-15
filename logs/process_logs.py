@@ -9,26 +9,81 @@ from os import path, listdir, makedirs
 from shutil import copy2
 from kqml import KQMLPerformative, KQMLException
 from datetime import datetime
+from pymongo import MongoClient
 
 from get_logs import get_logs_from_s3
 
 logger = logging.getLogger('log_processor')
+
+MONGO_URI = 'mongodb://localhost:27017/myDatabase'
+db = MongoClient(MONGO_URI).get_database('myDatabase')
+
+
+def _get_sessions_by_cont_name(cont_name):
+    matching_sessions = []
+    sessions = db.session_users.find()
+    if sessions is None:
+        return []
+    for sess in sessions:
+        if cont_name == sess['container_name']:
+            matching_sessions.append(sess)
+    return matching_sessions
+
+
+def _get_sessions_by_cont_id(cont_id):
+    matching_sessions = []
+    sessions = db.session_users.find()
+    if sessions is None:
+        return []
+    for sess in sessions:
+        if cont_id == sess['container_id']:
+            matching_sessions.append(sess)
+    return matching_sessions
+
+
+def get_sess_by_cont_name_id(cont_name, cont_id):
+    matching_sessions = []
+    id_sessions = _get_sessions_by_cont_id(cont_id)
+    for id_sess in id_sessions:
+        if cont_name == id_sess['container_name']:
+            matching_sessions.append(id_sess)
+    return matching_sessions
+
+
+def get_user_for_session(cont_name=None, cont_id=None):
+    matching_user = ''
+    user_email = ''
+    if cont_id is None and cont_name is None:
+        raise ValueError('either cont_id or cont_name must be provided')
+    sessions = _get_sessions_by_cont_name(cont_name) if cont_name else\
+        (_get_sessions_by_cont_id(cont_id) if cont_id else [])
+    for session in sessions:
+        if cont_name and session['container_name'] == cont_name or\
+                cont_id and session['container_id'] == cont_id:
+            matching_user = session.get('user', 'anonymous')
+            user_email = session.get('email', 'no registered email')
+            break
+    return matching_user, user_email
+
 
 THIS_DIR = path.abspath(path.dirname(__file__))
 SERVICE_DIR = path.abspath(path.join(THIS_DIR,
                                      path.pardir,
                                      'log_browse_service'))
 CWC_LOG_DIR = os.environ.get('CWC_LOG_DIR')
-STATIC_DIR = path.join(CWC_LOG_DIR, 'static') if CWC_LOG_DIR else path.join(
-    SERVICE_DIR, 'static')
-TEMPLATS_DIR = path.join(CWC_LOG_DIR, 'templates') if CWC_LOG_DIR else \
+STATIC_DIR = path.join(CWC_LOG_DIR, 'static') if CWC_LOG_DIR else\
+    path.join(SERVICE_DIR, 'static')
+TEMPLATES_DIR = path.join(CWC_LOG_DIR, 'templates') if CWC_LOG_DIR else\
     path.join(SERVICE_DIR, 'templates')
+ARCHIVES = path.join(CWC_LOG_DIR, '_archive') if CWC_LOG_DIR else\
+    path.join(SERVICE_DIR, '_archive')
 if not CWC_LOG_DIR:
     logger.info('Environment variable "CWC_LOG_DIR" not set, using default '
                 'paths for templates and processed logs: '
-                '%s' % TEMPLATS_DIR)
-ARCHIVES = path.join(SERVICE_DIR, '_archive')
-CSS_FILE = path.join(THIS_DIR, 'style.css')
+                '%s' % TEMPLATES_DIR)
+CSS_FILE = path.join(SERVICE_DIR, 'static', 'style.css')
+SRC_LOGIN_HTML = path.join(SERVICE_DIR, 'templates', 'login.html')
+SRC_BROWSE_HTML = path.join(SERVICE_DIR, 'templates', 'browse_index.html')
 IMG_DIRNAME = 'images'
 SESS_ID_MARK = '__SESS_ID_MARKER__'
 YMD_DT = '%Y-%m-%d-%H-%M-%S'
@@ -48,7 +103,7 @@ def make_html(html_parts, sess_id):
 class CwcLogEntry(object):
     """Parent class for entries in the logs."""
     possible_sems = ('sys_utterance', 'user_utterance', 'display_image',
-                     'add_provenance', 'display_sbgn', 'reset')
+                     'add_provenance', 'display_sbgn', 'reset', 'user_note')
 
     def __init__(self, type, time, message, partner, log_dir):
         self.type = type
@@ -100,6 +155,7 @@ class CwcLogEntry(object):
         """
         bob_back = '#2E64FE'
         usr_back = '#A5DF00'
+        usr_note_back = '#DFA418'  # More yellow green than `usr_back`
         fore_clr = '#FFFFFF'
         if self.is_sem('sys_utterance'):
             print('SYS:', str(self.content)[:500])
@@ -113,6 +169,13 @@ class CwcLogEntry(object):
             inp = cont.gets('text')
             name = 'User'
             back_clr = usr_back
+            col_sm = 'usr_name'
+            msg_sm = 'usr_msg'
+        elif self.is_sem('user_note'):
+            print('USR-NOTE:', str(self.content)[:500])
+            inp = cont.gets('text')
+            name = 'User Note'
+            back_clr = usr_note_back
             col_sm = 'usr_name'
             msg_sm = 'usr_msg'
         elif self.is_sem('add_provenance'):
@@ -136,7 +199,7 @@ class CwcLogEntry(object):
                                          SESS_ID_MARK, *img_path_seg])
 
             # Hardcode path to static folder:
-            # /static/<name>/<sess_id>/images/<image.png>
+            # /static/<sess_id>/images/<image.png>
             inp = ('<img src=\"/%s\" alt=\"Image '
                    '/%s not available\">' % (img_loc, img_loc))
             img_type = cont.gets('type')
@@ -166,11 +229,17 @@ class CwcLogEntry(object):
             return False
 
     def _content_is(self, msg_type):
-        simple_types = ['display_image', 'display_sbgn', 'add_provenance']
+        simple_types = ['display_sbgn']
         if msg_type in simple_types:
             msg_type = msg_type.replace('_', '-')
             ret = self._cont_is_type('tell', msg_type)
             return ret
+        elif msg_type == 'display_image':
+            return (self.partner and self.partner.upper() != 'BA' and
+                    self._cont_is_type('tell', 'display-image'))
+        elif msg_type == 'add_provenance':
+            return (self.partner and self.partner.upper() != 'BA' and
+                    self._cont_is_type('tell', 'add-provenance'))
         elif msg_type == 'sys_utterance':
             return (self.partner and self.partner.upper() == 'BA' and
                     self._cont_is_type('tell', 'spoken'))
@@ -192,6 +261,9 @@ class CwcLogEntry(object):
             inner_content = self.content.get('content').get('content')
             return (is_shout and inner_content
                     and inner_content.head().upper() == 'START-CONVERSATION')
+        elif msg_type == 'user_note':
+            return (self.partner and self.partner.upper() == 'BA' and
+                    self._cont_is_type('tell', 'user-note'))
         logger.warning("Unrecognized message type: %s" % msg_type)
         return False
 
@@ -301,15 +373,19 @@ class CwcLog(object):
         return self.io_entries
 
     def make_header(self):
+        # Get user and id from the Mongo DB
+        user, email = get_user_for_session(cont_name=self.container_name)
         html = """
         <div class="row start_time">
           <div class="col-sm">
             Dialogue running {container} container with image {image} using
-            the {interface} interface started at: {start}
+            the {interface} interface started at: {start}. User is {user} 
+            ({email}).
           </div>
         </div>
         """.format(start=self.get_start_time(), container=self.container_name,
-                   image=self.image_id, interface=self.interface)
+                   image=self.image_id, interface=self.interface, user=user,
+                   email=email)
         return textwrap.dedent(html)
 
     def make_html(self, sess_id):
@@ -384,26 +460,15 @@ def export_logs(log_dir_path, sess_id, out_file=None, file_type='html',
 
 def main():
     parser = argparse.ArgumentParser('Update the CWC Bob logs')
-    parser.add_argument('--name', default='logs',
-                        help='Name of directory to write logs to. Only '
-                             'provide a name, the full paths are '
-                             'automatically set by the script. '
-                             'Suggestion: set CWC_LOG_DIR first (e.g. '
-                             '`export CWC_LOG_DIR=\'logs\'` and then run '
-                             'this script like `python process_logs.py '
-                             '--name ${CWC_LOG_DIR}` + other optional '
-                             'arguments. Then when the flask app runs, it '
-                             'will use the same environement variable.')
     parser.add_argument('--overwrite', action='store_true', default=False,
-                        help='If logs are already stored at the given '
-                             'name, overwrite the current logs there.')
+                        help='If logs are already stored at ${CWC_LOG_DIR}, '
+                             'overwrite the current logs there.')
     parser.add_argument('--days-old', type=int,
                         help='Provide the number of days back to retrieve '
                              'the logs. If this option is not provided, '
                              'all the logs will be downloaded.')
     args = parser.parse_args()
-    CWC_LOG_DIR = args.name
-    loc = TEMPLATS_DIR
+    loc = TEMPLATES_DIR
     overwrite = args.overwrite  # Todo control caching
     days_ago = args.days_old
     if not path.isdir(ARCHIVES):
@@ -411,20 +476,24 @@ def main():
 
     log_dirs = get_logs_from_s3(loc, past_days=days_ago)
     transcripts = []
+    logger.info('Processing logs to html format')
     for dirname in log_dirs:
+        # Set paths, get log for session
         log_dir = path.join(loc, dirname)
         log, out_file = export_logs(log_dir, dirname)
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
+
         # Merge tar.gz files to single archive
         archive_fname = path.join(ARCHIVES, dirname + '_archive.tar.gz')
         if len([file for file in listdir(log_dir) if
-                file.endswith('.tar.gz')]) > 1:
+                file.endswith('.tar.gz') or file.endswith('.json')]) > 1:
             with tarfile.open(archive_fname, 'w|gz') as tarf:
                 for file in listdir(log_dir):
-                    if file.endswith('.tar.gz'):
+                    if file.endswith(('.tar.gz', '.json')):
                         fpath = path.join(log_dir, file)
                         tarf.add(fpath, arcname=file)
+
         # Copy images to static directory
         if path.isdir(path.join(log_dir, IMG_DIRNAME)):
             for img_file in listdir(path.join(log_dir, IMG_DIRNAME)):
@@ -438,19 +507,32 @@ def main():
                     makedirs(dest_path, exist_ok=True)
                     copy2(source, path.join(dest_path, img_file_name))
     transcripts.sort()
-    json_fname = path.join(loc, 'transcripts.json')
-    mode = 'a' if path.isfile(json_fname) else 'w'
-    with open(json_fname, mode) as f:
+    json_fname = 'transcripts.json'
+    logger.info('Creating json with list of all transcripts in %s' %
+                json_fname)
+    json_fname_path = path.join(loc, json_fname)
+    mode = 'a' if path.isfile(json_fname_path) else 'w'
+    with open(json_fname_path, mode) as f:
         json.dump([[path.abspath(of), dt.strftime(YMD_DT)]
                    for dt, of in transcripts], f, indent=1)
+    logger.info('Copying html and css files to their directories in %s' %
+                CWC_LOG_DIR)
     with open(path.join(THIS_DIR, 'index_template.html'), 'r') as f:
         html_template = f.read()
     html = html_template.replace('<<__DATE__>>',
                                  str(datetime.utcnow().strftime(YMD_DT)))
     with open(path.join(loc, 'log_view.html'), 'w') as f:
         f.write(html)
-    dest = path.join(STATIC_DIR, 'style.css')
-    copy2(CSS_FILE, dest)
+
+    # Copy CSS file
+    css_dst = path.join(STATIC_DIR, 'style.css')
+    copy2(CSS_FILE, css_dst)
+
+    # Copy login.html and browse_index.html
+    login_dst = path.join(TEMPLATES_DIR, 'login.html')
+    browse_dst = path.join(TEMPLATES_DIR, 'browse_index.html')
+    copy2(SRC_BROWSE_HTML, browse_dst)
+    copy2(SRC_LOGIN_HTML, login_dst)
 
 
 if __name__ == '__main__':
