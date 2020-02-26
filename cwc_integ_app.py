@@ -268,16 +268,14 @@ class ClicForm(Form):
     # https://wtforms.readthedocs.io/en/stable/validators.html
     user_name = StringField('Name', validators=[validators.unicode_literals,
                                                 validators.input_required])
-    user_email = EmailField('Email', validators=[validators.Email(),
-                                                 validators.input_required])
+    user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with CLiC')
 
 
 class SbgnForm(Form):
     user_name = StringField('Name', validators=[validators.unicode_literals,
                                                 validators.input_required])
-    user_email = EmailField('Email', validators=[validators.Email(),
-                                                 validators.input_required])
+    user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with SBGN')
 
 
