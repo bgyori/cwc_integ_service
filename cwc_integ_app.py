@@ -259,7 +259,7 @@ def _launch_app(interface_port_num, app_name, extension=''):
     logger.info('Start redirecting %s interface.' % app_name)
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
-                           time_out=90, container_name=cont_name,
+                           time_out=60, container_name=cont_name,
                            interface=app_name)
 
 
