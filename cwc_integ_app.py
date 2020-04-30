@@ -316,8 +316,8 @@ def _stop_container(cont_id, remove_record=True):
     logger.info("Got container %s, aka %s." % (cont.id, cont.name))
     get_logs_for_container(cont, record['interface'], LOGS_LOCAL_DIR)
     cont.stop()
-    cont.remove()
-    logger.info("Container removed.")
+    # cont.remove()
+    logger.info("Container stopped.")
     decrement_sessions()
     return
 
@@ -363,7 +363,7 @@ def cleanup():
             print("(%d/%d) Resolving %s...." % (i+1, num_conts, cont_id))
             _stop_container(cont_id)
         except Exception as e:
-            logger.error("Faild to shut down the container: %s!" % (cont_id))
+            logger.error("Failed to shut down the container: %s!" % cont_id)
             logger.error("Reasion:")
             logger.exception(e)
             logger.info("Continuing...")
