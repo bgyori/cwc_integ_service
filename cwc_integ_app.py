@@ -257,9 +257,10 @@ def _launch_app(interface_port_num, app_name, extension=''):
         user_session_association(user, email, cont_id, cont_name, app_name,
                                  extension, port, interface_port_num)
     logger.info('Start redirecting %s interface.' % app_name)
+    time_out = 30 if app_name == 'CLIC' else 60
     return render_template('launch_dialogue.html', dialogue_url=host,
                            manager_url=base_host, container_id=cont_id,
-                           time_out=60, container_name=cont_name,
+                           time_out=time_out, container_name=cont_name,
                            interface=app_name)
 
 
@@ -325,8 +326,11 @@ def _run_container(port, expose_port, app_name):
     num_sessions = increment_sessions()
     logger.info('We now have %d active sessions' % num_sessions)
     client = docker.from_env()
+    startup = '/sw/cwc-integ/startup%s.sh' % ('_clic'
+                                              if app_name == 'CLIC'
+                                              else '')
     cont = client.containers.run('cwc-integ:dev',
-                                 '/sw/cwc-integ/startup.sh',
+                                 startup,
                                  detach=True,
                                  ports={('%d/tcp' % expose_port): port})
     logger.info('Launched container %s exposing port %d via port %d'
