@@ -7,7 +7,7 @@
 {{util.flashed_messages(dismissible=True)}}
 <div class="container">
     <div class="jumbotron">
-        <h1>Bob with Bioagents</h1>
+        <h1>Bob with Bioagents dialogue system</h1>
         <p>
         Bob with Bioagents is a machine partner you can chat with
         about molecular biology and solve problems together.
@@ -16,18 +16,16 @@
         </p>
         <p>
         To launch the dialogue system, please enter your name and email
-        address, click on one of launch the buttons below, and wait
-        60 seconds to get a dedicated instance of the dialogue system.
-        Once started, the dialogue session will appear on the page and you can
-        start talking with the machine agent. When you are done, click the
+        address, click on one of the launch buttons below, and wait
+        (CLiC: 30 seconds, SBGNViz: 60 seconds) to get a dedicated instance of
+        the dialogue system. Once started, the dialogue session will appear on
+        the page and you can start talking with the machine agent.
+        When you are done, click the
         <i>End Session</i> button above the dialogue interface.
         </p>
         <p>
-        The dialogue system was last updated on April 7 2020.
+        The dialogue system was last updated on June 11 2020.
         </p>
-        <p>
-        </p>
-
     </div>
 </div>
 
@@ -53,6 +51,11 @@
 
 
 <div class="container">
+    <div class "row">
+        <p>The Bob with Bioagents system provides the same
+        dialogue capabilities embedded in two different user interfaces.
+        The ideal choice between ClIC or SBGNViz depends on the use case.
+    </div>
     <style>
       .form-control {
         width: 90%;
@@ -69,8 +72,9 @@
             <div id="clic-panel" class="panel panel-default">
             <img src="/static/clic_small.png">
             <p>
-            The CLiC interface focuses on simple text-based dialogue with minimal
-            graphical display.
+            The CLiC interface focuses on text-based dialogue with an
+            integrated tab for uploading and discussing lists of genes and
+            experimental data.
             </p>
             <form class="form form-inline" method="post" action='launch_clic' role="form">
               {{ clic_form.hidden_tag() }}
@@ -85,9 +89,9 @@
             <div id="sbgn-panel" class="panel panel-default">
             <img src="/static/sbgn_small.png">
             <p>
-            The SBGNViz interface contains a large model canvas along
-            with the dialogue panel, allowing richer graphical model building and
-            analysis.
+            The SBGNViz interface contains a large and interactive model canvas
+            along with the text-based dialogue, allowing richer
+            model building, analysis, and export.
             </p>
             <form class="form form-inline" method="post" action='launch_sbgn' role="form">
               {{ sbgn_form.hidden_tag() }}
