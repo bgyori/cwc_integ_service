@@ -1,4 +1,4 @@
 #!/bin/bash
-export CWC_LOG_DIR=/pmc/logs/
+export CWC_LOG_DIR=/data/cwc_integ_service/session_logs
 pkill -f cwc_integ_app 
 python3 cwc_integ_app.py cleanup
