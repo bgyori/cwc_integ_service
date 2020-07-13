@@ -224,11 +224,11 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
     logger.info('Total number of images found: %d' %
                 len([k for k in keys if 'image' in k]))
     keys = [key for key in keys if key.startswith('bob_ec2_logs/')
-            and key.endswith(('.tar.gz', '.json'))]
+            and key.endswith(('.tar.gz', '.json', '.log'))]
     logger.info('Number of archives: %d' % len(keys))
 
     fname_patt = re.compile(
-        '([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).(tar\.gz|json)'
+        '([\w:-]+?)_(\w+?)_(\w+?_\w+?)_(.*).(tar\.gz|json|\.log)'
     )
     dir_set = set()
     for key in tqdm.tqdm(keys):
@@ -251,7 +251,7 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
         else:
             outpath = os.path.join(head_dir_path, 'log.txt')
             if cached and os.path.exists(outpath) and\
-                    not key.endswith('.json'):
+                    not key.endswith(('.json', '.log')):
                 continue
         tgz_file_name = key.split('/')[-1]
         tgz_file = os.path.join(head_dir_path, tgz_file_name)
@@ -261,7 +261,7 @@ def get_logs_from_s3(folder=None, cached=True, past_days=None):
         with open(tgz_file, 'wb') as tf:
             tf.write(byte_stream)
         # Re-open file
-        if tgz_file.endswith('.json'):
+        if tgz_file.endswith(('.json', '.log')):
             continue
         with open(tgz_file, 'rb') as file_byte_stream:
             with tarfile.open(None, 'r', fileobj=file_byte_stream) as tarf:
