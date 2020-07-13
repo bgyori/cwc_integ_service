@@ -15,6 +15,9 @@ from logs.get_logs import get_logs_for_container
 
 import logging
 
+DOCKER_IMAGE = 'cwc_integ'
+DOCKER_TAG = 'dev'
+
 LOGGING_FMT = ('[%(asctime)s] %(levelname)s '
                '- %(funcName)s@%(lineno)s: %(message)s')
 
@@ -22,7 +25,6 @@ logger = logging.getLogger('cwc-web-service')
 guni_logger = logging.getLogger('gunicorn.error')
 logger.handlers.extend(guni_logger.handlers)
 logging.basicConfig(level=logging.INFO, format=LOGGING_FMT)
-logger.info("Logging is working!")
 
 MAX_SESSIONS = 8
 class SessionLimitExceeded(Exception):
@@ -267,15 +269,13 @@ def _launch_app(interface_port_num, app_name, extension=''):
 class ClicForm(Form):
     # validators documentation:
     # https://wtforms.readthedocs.io/en/stable/validators.html
-    user_name = StringField('Name', validators=[validators.unicode_literals,
-                                                validators.input_required])
+    user_name = StringField('Name', validators=[validators.input_required()])
     user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with CLiC')
 
 
 class SbgnForm(Form):
-    user_name = StringField('Name', validators=[validators.unicode_literals,
-                                                validators.input_required])
+    user_name = StringField('Name', validators=[validators.input_required()])
     user_email = EmailField('Email', validators=[validators.Email()])
     submit_button = SubmitField('Launch with SBGN')
 
@@ -329,7 +329,7 @@ def _run_container(port, expose_port, app_name):
     startup = '/sw/cwc-integ/startup%s.sh' % ('_clic'
                                               if app_name == 'CLIC'
                                               else '')
-    cont = client.containers.run('cwc-integ:dev',
+    cont = client.containers.run('%s:%s' % (DOCKER_IMAGE, DOCKER_TAG),
                                  startup,
                                  detach=True,
                                  ports={('%d/tcp' % expose_port): port})
