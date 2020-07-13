@@ -19,6 +19,10 @@ MONGO_URI = 'mongodb://localhost:27017/myDatabase'
 db = MongoClient(MONGO_URI).get_database('myDatabase')
 
 
+class CwcLogError(Exception):
+    pass
+
+
 def _get_sessions_by_cont_name(cont_name):
     matching_sessions = []
     sessions = db.session_users.find()
@@ -294,8 +298,12 @@ class CwcLog(object):
 
         # Load and parse the log file.
         self.log_file = path.join(log_dir, 'log.txt')
-        with open(self.log_file, 'r') as f:
-            self.__log = f.read()
+        try:
+            with open(self.log_file, 'r') as f:
+                self.__log = f.read()
+        except FileNotFoundError as err:
+            raise CwcLogError('Could not find logfile %s associated with '
+                              'session' % self.log_file)
         self.start_time = None
 
         # Parse out information regarding the container from the dirname.
@@ -480,7 +488,11 @@ def main():
     for dirname in log_dirs:
         # Set paths, get log for session
         log_dir = path.join(loc, dirname)
-        log, out_file = export_logs(log_dir, dirname)
+        try:
+            log, out_file = export_logs(log_dir, dirname)
+        except CwcLogError as err:
+            logger.warning(err)
+            continue
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
 
