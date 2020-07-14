@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 import logging
 import tarfile
 import argparse
@@ -538,13 +539,20 @@ def main():
 
     # Copy CSS file
     css_dst = path.join(STATIC_DIR, 'style.css')
-    copy2(CSS_FILE, css_dst)
+    try_copy(CSS_FILE, css_dst)
 
     # Copy login.html and browse_index.html
     login_dst = path.join(TEMPLATES_DIR, 'login.html')
     browse_dst = path.join(TEMPLATES_DIR, 'browse_index.html')
-    copy2(SRC_BROWSE_HTML, browse_dst)
-    copy2(SRC_LOGIN_HTML, login_dst)
+    try_copy(SRC_BROWSE_HTML, browse_dst)
+    try_copy(SRC_LOGIN_HTML, login_dst)
+
+
+def try_copy(src, dst):
+    try:
+        copy2(src, dst)
+    except shutil.SameFileError:
+        pass
 
 
 if __name__ == '__main__':
