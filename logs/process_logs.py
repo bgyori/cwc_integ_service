@@ -478,19 +478,20 @@ def main():
                              'all the logs will be downloaded.')
     args = parser.parse_args()
     loc = TEMPLATES_DIR
-    overwrite = args.overwrite  # Todo control caching
+    use_cache = not args.overwrite
     days_ago = args.days_old
     if not path.isdir(ARCHIVES):
         makedirs(ARCHIVES, exist_ok=True)
 
-    log_dirs = get_logs_from_s3(loc, past_days=days_ago)
+    log_dirs = get_logs_from_s3(loc, cached=use_cache,
+                                past_days=days_ago)
     transcripts = []
     logger.info('Processing logs to html format')
     for dirname in log_dirs:
         # Set paths, get log for session
         log_dir = path.join(loc, dirname)
         try:
-            log, out_file = export_logs(log_dir, dirname)
+            log, out_file = export_logs(log_dir, dirname, use_cache=use_cache)
         except CwcLogError as err:
             logger.warning(err)
             continue
