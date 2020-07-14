@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 import logging
 import tarfile
 import argparse
@@ -17,6 +18,10 @@ logger = logging.getLogger('log_processor')
 
 MONGO_URI = 'mongodb://localhost:27017/myDatabase'
 db = MongoClient(MONGO_URI).get_database('myDatabase')
+
+
+class CwcLogError(Exception):
+    pass
 
 
 def _get_sessions_by_cont_name(cont_name):
@@ -294,8 +299,12 @@ class CwcLog(object):
 
         # Load and parse the log file.
         self.log_file = path.join(log_dir, 'log.txt')
-        with open(self.log_file, 'r') as f:
-            self.__log = f.read()
+        try:
+            with open(self.log_file, 'r') as f:
+                self.__log = f.read()
+        except FileNotFoundError as err:
+            raise CwcLogError('Could not find logfile %s associated with '
+                              'session' % self.log_file)
         self.start_time = None
 
         # Parse out information regarding the container from the dirname.
@@ -469,28 +478,33 @@ def main():
                              'all the logs will be downloaded.')
     args = parser.parse_args()
     loc = TEMPLATES_DIR
-    overwrite = args.overwrite  # Todo control caching
+    use_cache = not args.overwrite
     days_ago = args.days_old
     if not path.isdir(ARCHIVES):
         makedirs(ARCHIVES, exist_ok=True)
 
-    log_dirs = get_logs_from_s3(loc, past_days=days_ago)
+    log_dirs = get_logs_from_s3(loc, cached=use_cache,
+                                past_days=days_ago)
     transcripts = []
     logger.info('Processing logs to html format')
     for dirname in log_dirs:
         # Set paths, get log for session
         log_dir = path.join(loc, dirname)
-        log, out_file = export_logs(log_dir, dirname)
+        try:
+            log, out_file = export_logs(log_dir, dirname, use_cache=use_cache)
+        except CwcLogError as err:
+            logger.warning(err)
+            continue
         time = datetime.strptime(log.get_start_time(), '%I:%M %p %m/%d/%y')
         transcripts.append((time, out_file))
 
         # Merge tar.gz files to single archive
         archive_fname = path.join(ARCHIVES, dirname + '_archive.tar.gz')
         if len([file for file in listdir(log_dir) if
-                file.endswith('.tar.gz') or file.endswith('.json')]) > 1:
+                file.endswith(('.tar.gz', '.json', '.log'))]) > 1:
             with tarfile.open(archive_fname, 'w|gz') as tarf:
                 for file in listdir(log_dir):
-                    if file.endswith(('.tar.gz', '.json')):
+                    if file.endswith(('.tar.gz', '.json', '.log')):
                         fpath = path.join(log_dir, file)
                         tarf.add(fpath, arcname=file)
 
@@ -526,13 +540,20 @@ def main():
 
     # Copy CSS file
     css_dst = path.join(STATIC_DIR, 'style.css')
-    copy2(CSS_FILE, css_dst)
+    try_copy(CSS_FILE, css_dst)
 
     # Copy login.html and browse_index.html
     login_dst = path.join(TEMPLATES_DIR, 'login.html')
     browse_dst = path.join(TEMPLATES_DIR, 'browse_index.html')
-    copy2(SRC_BROWSE_HTML, browse_dst)
-    copy2(SRC_LOGIN_HTML, login_dst)
+    try_copy(SRC_BROWSE_HTML, browse_dst)
+    try_copy(SRC_LOGIN_HTML, login_dst)
+
+
+def try_copy(src, dst):
+    try:
+        copy2(src, dst)
+    except shutil.SameFileError:
+        pass
 
 
 if __name__ == '__main__':
