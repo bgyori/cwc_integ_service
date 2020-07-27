@@ -15,6 +15,11 @@ from pymongo import MongoClient
 from get_logs import get_logs_from_s3
 
 logger = logging.getLogger('log_processor')
+logging.basicConfig(format=('%(levelname)s: [%(asctime)s] %(name)s'
+                            ' - %(message)s'),
+                    level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+
+
 
 MONGO_URI = 'mongodb://localhost:27017/myDatabase'
 db = MongoClient(MONGO_URI).get_database('myDatabase')
@@ -123,7 +128,12 @@ class CwcLogEntry(object):
     def get_content(self):
         """Convert the entry to a message."""
         if not self.content:
-            self.content = KQMLPerformative.from_string(self.message)
+            maxlen = 100000
+            if len(self.message) <= maxlen:
+                self.content = KQMLPerformative.from_string(self.message)
+            else:
+                raise KQMLException('Message is longer than %d characters'
+                                    % maxlen)
         return self.content
 
     def get_sem(self):

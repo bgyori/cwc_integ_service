@@ -15,7 +15,7 @@ from logs.get_logs import get_logs_for_container
 
 import logging
 
-DOCKER_IMAGE = 'cwc_integ'
+DOCKER_IMAGE = 'cwc-integ'
 DOCKER_TAG = 'dev'
 
 LOGGING_FMT = ('[%(asctime)s] %(levelname)s '
@@ -26,7 +26,7 @@ guni_logger = logging.getLogger('gunicorn.error')
 logger.handlers.extend(guni_logger.handlers)
 logging.basicConfig(level=logging.INFO, format=LOGGING_FMT)
 
-MAX_SESSIONS = 8
+MAX_SESSIONS = 4
 class SessionLimitExceeded(Exception):
     pass
 
@@ -237,7 +237,9 @@ def _launch_app(interface_port_num, app_name, extension=''):
         logger.info('Number of sessions: %d' % num_sessions)
         # TODO: this should be part of the index page with buttons
         # greyed out
-        return 'There are currently too many sessions, please come back later.'
+        return ('There are currently too many sessions, please come'
+                'back later or try the backup server at '
+                'http://34.230.33.149/.')
     # Here we check if the same token was already used to start a session
     token = request.form['csrf_token']
     if has_token(token):
